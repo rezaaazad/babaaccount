@@ -1,0 +1,16 @@
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+*.bak
+*.log
+*.tmp
+.idea/
+.vscode/
+*.code-workspace
+node_modules/
+vendor/
+.phpunit.result.cache
+phpunit.xml
+.php-cs-fixer.cache

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>مستندات API همکاری در فروش هوش‌مارکت</title>
+  <style>
+    body { font-family: Vazirmatn, Tahoma, sans-serif; line-height: 1.8; margin: 0; background: #f4f7f7; color: #142226; }
+    main { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
+    h1, h2 { line-height: 1.4; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    pre { direction: ltr; text-align: left; background: #102026; color: #e7f6f4; padding: 14px; border-radius: 12px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; background: #fff; }
+    th, td { text-align: right; border-bottom: 1px solid #d7e0e0; padding: 8px; vertical-align: top; }
+    .card { background: #fff; border-radius: 16px; padding: 16px 18px; margin: 16px 0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>مستندات API همکاری در فروش</h1>
+  <p>این رابط برای همکارانی است که حسابشان تأیید شده، کیف پول دارند و می‌خواهند اکانت را بدون ورود به صندوق فروشگاه بخرند. پایهٔ آدرس:</p>
+  <pre>https://example.com/wp-json/hooshmarket/v1</pre>
+  <p>مبالغ عدد صحیح‌اند. اگر واحد پول فروشگاه تومان و بدون اعشار باشد، همان عدد تومان است. مشخصات ماشین‌خوان در <code>openapi/openapi.yaml</code> است.</p>
+
+  <div class="card">
+    <h2>احراز هویت</h2>
+    <p>کلید را از پنل همکاری می‌سازید. فقط یک‌بار کامل نشان داده می‌شود و در پایگاه به‌صورت درهم‌ساز SHA-256 می‌ماند.</p>
+    <pre>Authorization: Bearer hm_live_...</pre>
+    <p>اگر برای کلید فهرست IP گذاشته باشید، فقط همان آدرس‌ها قبول می‌شوند. سقف پیش‌فرض ۶۰ درخواست در دقیقه است. پاسخ‌ها هدر <code>X-RateLimit-Limit</code> و <code>X-RateLimit-Remaining</code> دارند.</p>
+  </div>
+
+  <div class="card">
+    <h2>فهرست محصول</h2>
+    <pre>curl -sS "https://example.com/wp-json/hooshmarket/v1/products?per_page=20" \
+  -H "Authorization: Bearer hm_live_YOUR_KEY" \
+  -H "Accept: application/json"</pre>
+    <p><code>price</code> قیمت سطح شماست. <code>retail_price</code> قیمت ویترین است. <code>stock</code> موجودی اکانت قابل تحویل است، نه لزوماً موجودی انبار ووکامرس.</p>
+  </div>
+
+  <div class="card">
+    <h2>ثبت سفارش</h2>
+    <p>هدر <code>Idempotency-Key</code> اجباری است. اگر شبکه قطع شد، همان کلید و همان بدنه را دوباره بفرستید. سفارش و کسر موجودی تکرار نمی‌شود. بدنهٔ متفاوت با همان کلید، خطای <code>idempotency_conflict</code> می‌دهد.</p>
+    <p>کمبود موجودی کیف پول کلید را مصرف نمی‌کند تا بعد از شارژ همان کلید را دوباره بفرستید. اگر سفارش ساخته شود و تحویل شکست بخورد، مبلغ برمی‌گردد، وضعیت <code>failed</code> می‌ماند و تکرار همان کلید همان نتیجه را برمی‌گرداند.</p>
+    <pre>curl -sS -X POST "https://example.com/wp-json/hooshmarket/v1/orders" \
+  -H "Authorization: Bearer hm_live_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: 6f1c0c3e-1b2a-4d55-9c3a-0b9e8a7d6c5b" \
+  -d '{"product_id":120,"quantity":1,"reference":"inv-1001"}'</pre>
+    <p>پاسخ ۲۰۱ فیلد <code>credentials</code> را با نام کاربری و رمز تحویل‌شده دارد. بعداً با <code>GET /orders/120</code> همان اطلاعات را می‌گیرید. فهرست <code>GET /orders</code> رمزها را برنمی‌گرداند.</p>
+  </div>
+
+  <div class="card">
+    <h2>کیف پول</h2>
+    <pre>curl -sS "https://example.com/wp-json/hooshmarket/v1/wallet" \
+  -H "Authorization: Bearer hm_live_YOUR_KEY"
+
+curl -sS "https://example.com/wp-json/hooshmarket/v1/wallet/transactions?page=1" \
+  -H "Authorization: Bearer hm_live_YOUR_KEY"</pre>
+    <p>شارژ آنلاین با خرید محصولی انجام می‌شود که در ویرایش محصول، گزینهٔ «شارژ کیف پول» برایش روشن است. مبلغ پرداخت‌شده بعد از تکمیل سفارش به کیف پول همکار اضافه می‌شود. مدیر هم می‌تواند موجودی را دستی زیاد یا کم کند؛ هر دو در دفتر کل می‌مانند.</p>
+  </div>
+
+  <div class="card">
+    <h2>وب‌هوک</h2>
+    <p>رویدادها: <code>order.delivered</code> و <code>order.failed</code>. بدنه JSON است و امضای HMAC-SHA256 آن در هدر <code>X-HooshMarket-Signature</code> با پیشوند <code>sha256=</code> می‌آید. رمز امضا در پنل همکاری و در <code>GET /me</code> است.</p>
+    <pre>PUT /me/webhook
+{"url":"https://partner.example/hooks/hooshmarket"}</pre>
+    <p>اگر پاسخ شما ۲xx نباشد، ارسال تا ۵ بار با فاصلهٔ ۱، ۵، ۱۵، ۶۰ و ۳۶۰ دقیقه تکرار می‌شود. شناسهٔ <code>id</code> رویداد را برای جلوگیری از پردازش دوباره نگه دارید.</p>
+    <pre>$expected = 'sha256=' . hash_hmac('sha256', $rawBody, $secret);
+$ok = hash_equals($expected, $_SERVER['HTTP_X_HOOSHMARKET_SIGNATURE'] ?? '');</pre>
+  </div>
+
+  <div class="card">
+    <h2>شکل خطا</h2>
+    <p>همهٔ خطاها این شکل را دارند. <code>request_id</code> همان هدر <code>X-Request-Id</code> است و در لاگ مدیر دیده می‌شود. بدنهٔ درخواست، کلید و رمز اکانت در لاگ ذخیره نمی‌شود.</p>
+    <pre>{"error":{"code":"insufficient_funds","message":"موجودی کیف پول کافی نیست.","request_id":"ab12cd34ef56ab78"}}</pre>
+    <table>
+      <thead><tr><th>کد</th><th>HTTP</th><th>معنی</th></tr></thead>
+      <tbody>
+        <tr><td>invalid_api_key</td><td>401</td><td>کلید نیست، اشتباه است یا باطل شده</td></tr>
+        <tr><td>reseller_suspended</td><td>403</td><td>حساب مسدود است</td></tr>
+        <tr><td>reseller_not_approved</td><td>403</td><td>هنوز تأیید نشده</td></tr>
+        <tr><td>ip_not_allowed</td><td>403</td><td>IP بیرون فهرست مجاز است</td></tr>
+        <tr><td>rate_limited</td><td>429</td><td>سقف این دقیقه پر شده</td></tr>
+        <tr><td>insufficient_funds</td><td>402</td><td>موجودی کم است و کلید تکرار مصرف نشده</td></tr>
+        <tr><td>invalid_idempotency_key</td><td>400</td><td>هدر کلید تکرار ناقص است</td></tr>
+        <tr><td>idempotency_conflict</td><td>409</td><td>همان کلید با بدنهٔ دیگری آمده</td></tr>
+        <tr><td>out_of_stock</td><td>409</td><td>اکانت کافی نبود؛ اگر سفارش ثبت شده باشد مبلغ برگشته</td></tr>
+        <tr><td>product_not_found</td><td>404</td><td>محصول برای همکاری موجود نیست</td></tr>
+        <tr><td>order_not_found</td><td>404</td><td>سفارش مال این همکار نیست</td></tr>
+        <tr><td>fulfillment_unavailable</td><td>503</td><td>جدول موجودی aimarket پیدا نشد</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+</body>
+</html>

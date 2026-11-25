@@ -1,0 +1,62 @@
+/**
+ * «هوش‌مارکت» entry in the wp-admin sidebar: a gradient pill behind the label
+ * plus the colored tile icon, so the panel is the first thing the eye lands
+ * on after sign-in — the way modern store plugins style their menus.
+ * Loaded on every admin screen; scoped to this plugin's item only.
+ */
+
+/* The label as a small gradient button. */
+#adminmenu #toplevel_page_aimarket .wp-menu-name {
+        margin: 2px 0;
+        padding: 5px 10px !important;
+        border-radius: 8px;
+        background: linear-gradient(90deg, #1d4ed8, #7c3aed);
+        color: #fff !important;
+        font-weight: 800 !important;
+        font-size: 14px !important;
+        line-height: 1.8 !important;
+        text-shadow: none !important;
+        box-shadow: 0 8px 18px -10px rgba(37, 99, 235, .95);
+        transition: transform .15s ease, box-shadow .15s ease;
+}
+
+/* Hover / current: a slightly stronger lift, still white text. */
+#adminmenu #toplevel_page_aimarket a:hover .wp-menu-name,
+#adminmenu #toplevel_page_aimarket.current .wp-menu-name,
+#adminmenu #toplevel_page_aimarket.wp-has-current-submenu .wp-menu-name {
+        color: #fff !important;
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px -10px rgba(124, 58, 237, 1);
+}
+
+/* The icon is a baked PNG printed as a plain <img>: full-strength pixels at
+   the dashicon size. WordPress dims custom menu icons to .6 until hover —
+   undo that everywhere, and keep the soft glow around the tile. */
+#adminmenu #toplevel_page_aimarket .wp-menu-image img {
+        width: 20px;
+        height: 20px;
+        opacity: 1 !important;
+        filter: drop-shadow(0 0 7px rgba(99, 102, 241, .55));
+}
+
+/* Pending-work counter: keep the red bubble readable on the gradient. */
+#adminmenu #toplevel_page_aimarket .wp-menu-name .awaiting-mod {
+        margin-inline-start: 4px;
+        border: 1px solid rgba(255, 255, 255, .35);
+}
+
+/* Folded sidebar: only the tile icon shows; keep it centered and glowing. */
+.folded #adminmenu #toplevel_page_aimarket .wp-menu-image {
+        transition: transform .15s ease;
+}
+.folded #adminmenu #toplevel_page_aimarket a:hover .wp-menu-image {
+        transform: translateY(-1px);
+}
+
+@media (max-width: 782px) {
+        /* Mobile admin: the label pill keeps its padding small. */
+        #adminmenu #toplevel_page_aimarket .wp-menu-name {
+                padding: 3px 8px !important;
+                font-size: 13px !important;
+        }
+}

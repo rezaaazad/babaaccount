@@ -1,0 +1,234 @@
+@font-face {
+  font-family: "Hmr Vazirmatn";
+  src: url("../fonts/Vazirmatn-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Hmr Vazirmatn";
+  src: url("../fonts/Vazirmatn-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+.hmr-dash,
+.hmr-docs {
+  --hmr-accent: var(--aimarket-primary, var(--woocommerce, #0f6e6e));
+  --hmr-ink: var(--aimarket-text, inherit);
+  --hmr-muted: var(--aimarket-muted, color-mix(in srgb, currentColor 62%, transparent));
+  --hmr-line: color-mix(in srgb, currentColor 14%, transparent);
+  --hmr-card: color-mix(in srgb, Canvas 94%, CanvasText 6%);
+  direction: rtl;
+  font-family: "Hmr Vazirmatn", "Vazirmatn", "Vazir", Tahoma, sans-serif;
+  color: var(--hmr-ink);
+  line-height: 1.7;
+}
+
+.hmr-head,
+.hmr-stats,
+.hmr-card,
+.hmr-form,
+.hmr-keys,
+.hmr-usage {
+  margin-bottom: 16px;
+}
+
+.hmr-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.hmr-kicker {
+  margin: 0;
+  color: var(--hmr-muted);
+  font-size: 13px;
+}
+
+.hmr-head h2,
+.hmr-card h2,
+.hmr-card h3 {
+  margin: 0 0 8px;
+}
+
+.hmr-pill {
+  background: var(--hmr-accent);
+  color: #fff;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+.hmr-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hmr-stat,
+.hmr-card,
+.hmr-reveal {
+  background: var(--hmr-card);
+  border: 1px solid var(--hmr-line);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.hmr-stat span,
+.hmr-muted {
+  display: block;
+  color: var(--hmr-muted);
+  font-size: 13px;
+}
+
+.hmr-stat strong {
+  display: block;
+  font-size: 22px;
+  margin-top: 4px;
+}
+
+.hmr-card-warn {
+  border-color: #e0b15a;
+}
+
+.hmr-table-wrap {
+  overflow-x: auto;
+}
+
+.hmr-dash table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.hmr-dash th,
+.hmr-dash td {
+  text-align: right;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--hmr-line);
+  vertical-align: top;
+}
+
+.hmr-form,
+.hmr-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.hmr-form label {
+  margin-top: 10px;
+}
+
+.hmr-dash input,
+.hmr-dash textarea,
+.hmr-dash select,
+.hmr-docs input {
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid var(--hmr-line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.hmr-btn,
+.hmr-copy {
+  margin-top: 12px;
+  background: var(--hmr-accent);
+  color: #fff;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 18px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.hmr-btn-quiet,
+.hmr-copy {
+  background: transparent;
+  color: var(--hmr-accent);
+  border: 1px solid var(--hmr-accent);
+}
+
+.hmr-keys,
+.hmr-usage,
+.hmr-creds {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.hmr-keys li,
+.hmr-usage li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--hmr-line);
+}
+
+.hmr-empty {
+  color: var(--hmr-muted);
+}
+
+.hmr-flash {
+  background: color-mix(in srgb, var(--hmr-accent) 12%, transparent);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.hmr-flash-bad {
+  background: color-mix(in srgb, #b42318 12%, transparent);
+}
+
+.hmr-reveal {
+  margin-bottom: 12px;
+}
+
+.hmr-docs {
+  max-width: 860px;
+}
+
+.hmr-docs pre {
+  overflow-x: auto;
+  padding: 12px;
+  border-radius: 12px;
+  background: #102026;
+  color: #e7f6f4;
+  direction: ltr;
+  text-align: left;
+}
+
+.hmr-docs code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.hmr-docs table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.hmr-docs th,
+.hmr-docs td {
+  text-align: right;
+  border-bottom: 1px solid var(--hmr-line);
+  padding: 8px;
+}
+
+@media (max-width: 800px) {
+  .hmr-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .hmr-head,
+  .hmr-keys li {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

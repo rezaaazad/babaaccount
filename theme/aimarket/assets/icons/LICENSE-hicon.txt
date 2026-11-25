@@ -1,0 +1,7 @@
+Hicon (Free icon pack) - +2700 Editable icons, Figma Community.
+Style used: Linear (Border). Icons were exported from the Figma boards and cut
+into single SVGs by dev/hicon-split.py (file names: BOARD-NNN, the icon's
+position on its board, counted row by row).
+Licence: as published on the pack's Figma Community page (Figma Community files
+are shared under CC BY 4.0 unless the author states otherwise) — credit
+"Hicon" where your site lists third-party assets.

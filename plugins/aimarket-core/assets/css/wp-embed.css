@@ -1,0 +1,214 @@
+/* =========================================================================
+   Panel look for native wp-admin screens shown inside the store panel.
+   Everything is scoped to html.aim-embed (set by AIM_WP_Embed::head() only
+   when the page is framed by the panel), so wp-admin itself is untouched.
+   Colours follow panel.css; dark mode follows the panel's [data-theme].
+   ========================================================================= */
+
+html.aim-embed {
+	--primary: #2563eb; --primary-600: #1d4ed8; --primary-50: #eaf2ff;
+	--success: #16a34a; --success-50: #e8f7ee; --warning: #d97706; --warning-50: #fff5e5;
+	--danger: #e11d48; --danger-50: #ffecef; --info: #0284c7; --info-50: #e6f4fb;
+	--bg: #f3f5f7; --surface: #fff; --surface-2: #f8f9fb; --border: #e8edf3; --border-strong: #d9e0e8;
+	--text: #1c2025; --text-2: #5b6474; --text-3: #98a1b0;
+	--radius-sm: 10px; --radius: 14px; --radius-lg: 18px;
+	--font: Vazirmatn, IRANYekanX, Tahoma, sans-serif;
+	color-scheme: light;
+}
+/* Dark mode for classic screens; the block editor and WooCommerce's React pages keep their own light UI. */
+html.aim-embed[data-theme="dark"]:not(:has(body.block-editor-page, body.woocommerce-admin-page.woocommerce-admin-full-screen)) {
+	--primary: #4d8dff; --primary-600: #6aa1ff; --primary-50: #13284a;
+	--success-50: #10291b; --warning-50: #2e2210; --danger-50: #33141c; --info-50: #0f2633;
+	--bg: #0f1117; --surface: #171a23; --surface-2: #1d212c; --border: #262b38; --border-strong: #323849;
+	--text: #e8eaf0; --text-2: #a7aebd; --text-3: #6f7789;
+	color-scheme: dark;
+}
+
+/* ---------- WordPress chrome off ---------- */
+html.aim-embed #wpadminbar,
+html.aim-embed #adminmenumain,
+html.aim-embed #wpfooter,
+html.aim-embed .woocommerce-layout__activity-panel-tabs,
+html.aim-embed #woocommerce-embedded-root .woocommerce-layout__header-tasks-reminder-bar { display: none !important; }
+html.aim-embed.wp-toolbar { padding-top: 0 !important; }
+html.aim-embed #wpcontent,
+html.aim-embed #wpbody-content { margin: 0 !important; padding-right: 0; padding-left: 0; }
+html.aim-embed #wpbody-content { padding-bottom: 40px; }
+html.aim-embed .wrap { margin: 0; padding: 20px 24px 0; }
+html.aim-embed .woocommerce-layout__header { top: 0 !important; width: 100% !important; right: 0 !important; }
+html.aim-embed .woocommerce-layout { padding-top: 0; }
+html.aim-embed .block-editor-page .interface-interface-skeleton,
+html.aim-embed .block-editor-page .edit-post-layout { top: 0 !important; right: 0 !important; left: 0 !important; }
+@media (max-width: 782px) { html.aim-embed .wrap { padding: 14px 12px 0; } }
+
+/* ---------- Base ---------- */
+html.aim-embed body { background: var(--bg); color: var(--text); font-family: var(--font); }
+html.aim-embed body,
+html.aim-embed input, html.aim-embed select, html.aim-embed textarea, html.aim-embed button,
+html.aim-embed h1, html.aim-embed h2, html.aim-embed h3, html.aim-embed h4, html.aim-embed p, html.aim-embed label, html.aim-embed th, html.aim-embed td,
+html.aim-embed .button, html.aim-embed .components-button { font-family: var(--font) !important; }
+html.aim-embed a { color: var(--primary); }
+html.aim-embed a:hover, html.aim-embed a:focus { color: var(--primary-600); }
+html.aim-embed :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; box-shadow: none; }
+html.aim-embed h1, html.aim-embed h2, html.aim-embed h3, html.aim-embed .wrap > h2 { color: var(--text); }
+html.aim-embed .description, html.aim-embed p.help, html.aim-embed .howto { color: var(--text-3); }
+
+/* Page heading: the panel bar above the frame already shows it; keep only its "Add new" button. */
+html.aim-embed .wrap > h1.wp-heading-inline,
+html.aim-embed .wrap > h1:first-child:not(:has(+ .page-title-action)) { display: none; }
+html.aim-embed .wrap > .page-title-action:first-of-type { margin: 0 0 14px; top: 0; }
+html.aim-embed .page-title-action,
+html.aim-embed .wrap .add-new-h2 {
+	top: -3px; margin-right: 10px; padding: 0 14px !important; height: 34px; line-height: 32px !important;
+	border-radius: var(--radius-sm); background: var(--primary) !important; border: 0 !important; color: #fff !important; font-weight: 700; font-size: 13px;
+}
+html.aim-embed .page-title-action:hover { background: var(--primary-600) !important; }
+html.aim-embed hr.wp-header-end { margin: 0; border: 0; }
+
+/* ---------- Buttons ---------- */
+html.aim-embed .button,
+html.aim-embed .button-secondary {
+	min-height: 36px; line-height: 34px; padding: 0 14px; border-radius: var(--radius-sm);
+	background: var(--surface-2); border: 1px solid var(--border-strong); color: var(--text); font-weight: 600; box-shadow: none;
+}
+html.aim-embed .button:hover, html.aim-embed .button-secondary:hover { background: var(--surface); border-color: var(--primary); color: var(--primary); }
+html.aim-embed .button-primary,
+html.aim-embed .wp-core-ui .button-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+html.aim-embed .button-primary:hover, html.aim-embed .button-primary:focus { background: var(--primary-600); border-color: var(--primary-600); color: #fff; }
+html.aim-embed .button-link-delete, html.aim-embed .submitdelete, html.aim-embed a.delete { color: var(--danger) !important; }
+html.aim-embed .button-small, html.aim-embed .button.button-small { min-height: 28px; line-height: 26px; padding: 0 10px; font-size: 12px; }
+html.aim-embed .button-large { min-height: 42px; line-height: 40px; padding: 0 20px; }
+
+/* ---------- Fields ---------- */
+html.aim-embed input[type="text"], html.aim-embed input[type="search"], html.aim-embed input[type="email"],
+html.aim-embed input[type="url"], html.aim-embed input[type="number"], html.aim-embed input[type="password"],
+html.aim-embed input[type="tel"], html.aim-embed input[type="date"], html.aim-embed input[type="datetime-local"],
+html.aim-embed select, html.aim-embed textarea {
+	border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background-color: var(--surface); color: var(--text);
+	min-height: 38px; padding: 4px 12px; box-shadow: none;
+}
+html.aim-embed select { padding-left: 28px; }
+html.aim-embed textarea { padding: 10px 12px; line-height: 1.8; }
+html.aim-embed input:focus, html.aim-embed select:focus, html.aim-embed textarea:focus {
+	border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-50); outline: none;
+}
+html.aim-embed input[type="checkbox"], html.aim-embed input[type="radio"] { border-color: var(--border-strong); background: var(--surface); }
+html.aim-embed input[type="checkbox"]:checked { background: var(--primary); border-color: var(--primary); }
+html.aim-embed input[type="checkbox"]:checked::before { filter: brightness(0) invert(1); }
+html.aim-embed input[type="radio"]:checked::before { background: var(--primary); }
+html.aim-embed #titlediv #title { min-height: 50px; font-size: 18px; font-weight: 700; border-radius: var(--radius); padding: 6px 16px; }
+html.aim-embed .select2-container--default .select2-selection--single,
+html.aim-embed .select2-container--default .select2-selection--multiple { border-color: var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); min-height: 38px; }
+html.aim-embed .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 36px; color: var(--text); }
+html.aim-embed .select2-dropdown { background: var(--surface); border-color: var(--border-strong); color: var(--text); }
+
+/* ---------- Cards: metaboxes, settings sections ---------- */
+html.aim-embed .postbox,
+html.aim-embed .stuffbox,
+html.aim-embed .card,
+html.aim-embed #major-publishing-actions {
+	background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: none;
+}
+html.aim-embed .postbox { overflow: hidden; margin-bottom: 16px; }
+html.aim-embed .postbox .postbox-header { border-bottom: 1px solid var(--border); }
+html.aim-embed .postbox .hndle, html.aim-embed .postbox-header h2 { font-size: 14px !important; font-weight: 800; color: var(--text); padding: 12px 16px !important; }
+html.aim-embed .postbox .handle-actions button { color: var(--text-3); }
+html.aim-embed #major-publishing-actions { border: 0; border-top: 1px solid var(--border); border-radius: 0; background: var(--surface-2); }
+html.aim-embed #minor-publishing, html.aim-embed .misc-pub-section { color: var(--text-2); }
+html.aim-embed #poststuff h2.nav-tab-wrapper { padding: 0; }
+
+/* ---------- Tables ---------- */
+html.aim-embed .wp-list-table {
+	border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; border-collapse: separate; border-spacing: 0;
+	background: var(--surface); box-shadow: none;
+}
+html.aim-embed .wp-list-table thead th, html.aim-embed .wp-list-table thead td,
+html.aim-embed .wp-list-table tfoot th, html.aim-embed .wp-list-table tfoot td {
+	background: var(--surface-2); color: var(--text-2); font-weight: 700; font-size: 12.5px; border-color: var(--border);
+}
+html.aim-embed .wp-list-table td, html.aim-embed .wp-list-table th { border-color: var(--border); color: var(--text); }
+html.aim-embed .wp-list-table tbody tr { background: var(--surface); }
+html.aim-embed .striped > tbody > :nth-child(odd) { background: var(--surface-2); }
+html.aim-embed .wp-list-table tbody tr:hover { background: var(--primary-50); }
+html.aim-embed .wp-list-table .row-title { color: var(--text); font-weight: 700; }
+html.aim-embed .row-actions { color: var(--text-3); }
+html.aim-embed .tablenav { margin: 10px 0; }
+html.aim-embed .tablenav .tablenav-pages a, html.aim-embed .tablenav-pages-navspan {
+	min-width: 32px; min-height: 32px; line-height: 30px; border-radius: 9px; border-color: var(--border-strong); background: var(--surface); color: var(--text);
+}
+html.aim-embed .subsubsub { color: var(--text-3); }
+html.aim-embed .subsubsub a { color: var(--text-2); }
+html.aim-embed .subsubsub a.current { color: var(--primary); font-weight: 800; }
+html.aim-embed .subsubsub .count { color: var(--text-3); }
+html.aim-embed .search-box input[type="search"] { min-width: 220px; }
+
+/* ---------- Tabs (WooCommerce settings, product data) ---------- */
+html.aim-embed .nav-tab-wrapper, html.aim-embed .woo-nav-tab-wrapper {
+	display: flex; flex-wrap: wrap; gap: 6px; border: 0; padding: 0; margin: 0 0 16px;
+}
+html.aim-embed .nav-tab {
+	float: none; margin: 0; border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+	color: var(--text-2); font-weight: 700; font-size: 13px; padding: 6px 14px; line-height: 1.6;
+}
+html.aim-embed .nav-tab:hover { color: var(--primary); border-color: var(--primary); background: var(--surface); }
+html.aim-embed .nav-tab-active, html.aim-embed .nav-tab-active:hover { background: var(--primary); border-color: var(--primary); color: #fff; }
+html.aim-embed .woocommerce .subsubsub { margin-bottom: 12px; }
+
+/* Product data box: vertical tabs on the side, fields on a clean surface. */
+html.aim-embed #woocommerce-product-data .postbox-header h2 { gap: 10px; }
+html.aim-embed #woocommerce-product-data ul.wc-tabs { background: var(--surface-2); border-left: 1px solid var(--border); }
+html.aim-embed #woocommerce-product-data ul.wc-tabs::after { display: none; }
+html.aim-embed #woocommerce-product-data ul.wc-tabs li a { color: var(--text-2); border: 0; padding: 11px 14px; font-weight: 600; }
+html.aim-embed #woocommerce-product-data ul.wc-tabs li a:hover { color: var(--primary); background: var(--surface); }
+html.aim-embed #woocommerce-product-data ul.wc-tabs li.active a { background: var(--surface); color: var(--primary); font-weight: 800; box-shadow: inset -3px 0 0 var(--primary); }
+html.aim-embed #woocommerce-product-data .panel-wrap, html.aim-embed #woocommerce-product-data .wc-metaboxes-wrapper { background: var(--surface); }
+html.aim-embed .woocommerce_options_panel label, html.aim-embed .woocommerce_options_panel legend { color: var(--text-2); font-weight: 600; }
+html.aim-embed .woocommerce_options_panel .form-field input, html.aim-embed .woocommerce_options_panel .form-field select { border-radius: var(--radius-sm); }
+html.aim-embed .woocommerce_variation, html.aim-embed .wc-metabox { background: var(--surface-2); border: 1px solid var(--border) !important; border-radius: var(--radius); margin: 8px 12px !important; overflow: hidden; }
+html.aim-embed .woocommerce_variation h3, html.aim-embed .wc-metabox h3 { background: var(--surface); border: 0 !important; }
+html.aim-embed .toolbar, html.aim-embed .wc-metaboxes-wrapper .toolbar { border-color: var(--border) !important; }
+
+/* ---------- Settings forms ---------- */
+html.aim-embed .form-table { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); border-collapse: separate; overflow: hidden; margin-bottom: 18px; }
+html.aim-embed .form-table th { padding: 18px 20px; color: var(--text); font-weight: 700; width: 220px; }
+html.aim-embed .form-table td { padding: 14px 20px; color: var(--text-2); }
+html.aim-embed .form-table tr + tr > * { border-top: 1px solid var(--border); }
+html.aim-embed .wrap .woocommerce h2, html.aim-embed .wrap form > h2 { font-size: 16px; font-weight: 800; margin: 22px 0 10px; }
+html.aim-embed p.submit { padding: 6px 0 20px; }
+html.aim-embed .wc_gateways, html.aim-embed .wc_emails, html.aim-embed .wc-shipping-zones { border-radius: var(--radius-lg); overflow: hidden; }
+
+/* ---------- Notices ---------- */
+html.aim-embed .notice, html.aim-embed div.updated, html.aim-embed div.error, html.aim-embed .update-nag {
+	background: var(--surface); color: var(--text); border: 1px solid var(--border); border-right-width: 4px;
+	border-radius: var(--radius); box-shadow: none; margin: 0 0 14px;
+}
+html.aim-embed .notice-success, html.aim-embed div.updated { border-right-color: var(--success); }
+html.aim-embed .notice-error, html.aim-embed div.error { border-right-color: var(--danger); }
+html.aim-embed .notice-warning { border-right-color: var(--warning); }
+html.aim-embed .notice-info { border-right-color: var(--info); }
+
+/* ---------- Media & misc ---------- */
+html.aim-embed .media-frame, html.aim-embed .media-modal { font-family: var(--font); }
+html.aim-embed .attachments-browser .attachment-preview, html.aim-embed .media-frame .attachment-preview { border-radius: 10px; overflow: hidden; }
+html.aim-embed #screen-meta-links .show-settings { border-radius: 0 0 10px 10px; border-color: var(--border); background: var(--surface); color: var(--text-2); }
+html.aim-embed #screen-meta { background: var(--surface); border-color: var(--border); border-radius: var(--radius); }
+html.aim-embed .wp-editor-container, html.aim-embed .wp-editor-tabs .wp-switch-editor { border-color: var(--border-strong); }
+html.aim-embed .wp-editor-container { border-radius: 0 0 var(--radius-sm) var(--radius-sm); overflow: hidden; }
+html.aim-embed .quicktags-toolbar, html.aim-embed .mce-toolbar-grp { background: var(--surface-2) !important; border-color: var(--border) !important; }
+html.aim-embed .wp-switch-editor { background: var(--surface-2); color: var(--text-2); border-radius: 9px 9px 0 0; }
+html.aim-embed .html-active .switch-html, html.aim-embed .tmce-active .switch-tmce { background: var(--surface-2); color: var(--text); }
+html.aim-embed .categorydiv div.tabs-panel, html.aim-embed .tagsdiv .the-tags { border-color: var(--border); background: var(--surface-2); border-radius: var(--radius-sm); }
+html.aim-embed .category-tabs li.tabs { background: var(--surface-2); border-color: var(--border); border-radius: 8px 8px 0 0; }
+html.aim-embed #edittag, html.aim-embed #col-left .form-wrap, html.aim-embed .term-php .form-table { background: var(--surface); border-radius: var(--radius-lg); }
+html.aim-embed #col-left .form-wrap { padding: 4px 18px 10px; border: 1px solid var(--border); }
+html.aim-embed .form-wrap label { color: var(--text); font-weight: 700; }
+
+/* Dark-mode touch-ups for spots WordPress colours by hand. */
+html.aim-embed[data-theme="dark"] .wp-list-table .column-thumb img,
+html.aim-embed[data-theme="dark"] .postbox .inside img { filter: none; }
+html.aim-embed[data-theme="dark"] .postbox .inside,
+html.aim-embed[data-theme="dark"] #woocommerce-product-data .inside,
+html.aim-embed[data-theme="dark"] .woocommerce_options_panel,
+html.aim-embed[data-theme="dark"] #minor-publishing,
+html.aim-embed[data-theme="dark"] #post-body-content { color: var(--text-2); }
+html.aim-embed[data-theme="dark"] .wp-editor-area { background: var(--surface); color: var(--text); }

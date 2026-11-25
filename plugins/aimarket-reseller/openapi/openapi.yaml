@@ -1,0 +1,463 @@
+openapi: 3.0.3
+info:
+  title: HooshMarket Reseller API
+  description: >
+    Wholesale API for approved HooshMarket resellers. Prices are integers in the
+    store currency's minor unit (for تومان with zero decimals, the integer is the
+    toman amount). Authenticate with Authorization: Bearer hm_live_...
+  version: 1.0.0
+servers:
+  - url: https://example.com/wp-json/hooshmarket/v1
+    description: Store
+security:
+  - bearerAuth: []
+tags:
+  - name: Catalog
+  - name: Orders
+  - name: Wallet
+  - name: Account
+paths:
+  /products:
+    get:
+      tags: [Catalog]
+      summary: List products at this reseller's price
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/perPage'
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+  /orders:
+    get:
+      tags: [Orders]
+      summary: List this reseller's orders
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/perPage'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [delivered, failed, delivering]
+      responses:
+        '200':
+          description: Orders without credentials
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrderSummary'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Error'
+    post:
+      tags: [Orders]
+      summary: Buy from the wallet and deliver account credentials
+      parameters:
+        - $ref: '#/components/parameters/idempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+      responses:
+        '201':
+          description: Delivered. Replays of the same key return the same body.
+          headers:
+            Idempotent-Replayed:
+              schema:
+                type: string
+                enum: ['true']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderEnvelope'
+        '400':
+          $ref: '#/components/responses/Error'
+        '402':
+          description: Insufficient wallet balance. The idempotency key is not consumed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Out of stock, idempotency conflict, or a recorded failed delivery.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/OrderEnvelope'
+                  - $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          $ref: '#/components/responses/Error'
+  /orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Order status and delivered credentials
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Owned order, including credentials when it was delivered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderEnvelope'
+        '404':
+          $ref: '#/components/responses/Error'
+  /wallet:
+    get:
+      tags: [Wallet]
+      summary: Current balance
+      responses:
+        '200':
+          description: Balance in minor units
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Wallet'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+  /wallet/transactions:
+    get:
+      tags: [Wallet]
+      summary: Ledger
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/perPage'
+      responses:
+        '200':
+          description: Newest ledger rows first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LedgerEntry'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+  /me:
+    get:
+      tags: [Account]
+      summary: Reseller profile, tier, and webhook secret
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Profile'
+  /me/webhook:
+    put:
+      tags: [Account]
+      summary: Set the webhook URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  example: https://partner.example/hooks/hooshmarket
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      webhook_url:
+                        type: string
+        '422':
+          $ref: '#/components/responses/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    perPage:
+      name: per_page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    idempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: >
+        8 to 128 characters from [A-Za-z0-9._:-]. Reuse it to safely retry a
+        purchase. A different JSON body with the same key returns 409.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code:
+              type: string
+              example: insufficient_funds
+            message:
+              type: string
+              example: موجودی کیف پول کافی نیست.
+            request_id:
+              type: string
+    PageMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+        request_id:
+          type: string
+    RequestMeta:
+      type: object
+      properties:
+        request_id:
+          type: string
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        sku:
+          type: string
+        currency:
+          type: string
+          example: IRT
+        retail_price:
+          type: integer
+        price:
+          type: integer
+          description: Price for this reseller's tier, in minor units
+        discount_percent:
+          type: number
+        stock:
+          type: integer
+          nullable: true
+        in_stock:
+          type: boolean
+    OrderRequest:
+      type: object
+      required: [product_id]
+      properties:
+        product_id:
+          type: integer
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 1
+        reference:
+          type: string
+          maxLength: 120
+    OrderSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+          enum: [delivering, delivered, failed]
+        product_id:
+          type: integer
+        quantity:
+          type: integer
+        currency:
+          type: string
+        unit_price:
+          type: integer
+        total:
+          type: integer
+        reference:
+          type: string
+        error_code:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    Credential:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+        extra:
+          type: string
+    Order:
+      allOf:
+        - $ref: '#/components/schemas/OrderSummary'
+        - type: object
+          properties:
+            credentials:
+              type: array
+              items:
+                $ref: '#/components/schemas/Credential'
+    OrderEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Order'
+        meta:
+          $ref: '#/components/schemas/RequestMeta'
+    Wallet:
+      type: object
+      properties:
+        balance:
+          type: integer
+        currency:
+          type: string
+        formatted:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+    LedgerEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        direction:
+          type: string
+          enum: [credit, debit]
+        type:
+          type: string
+        amount:
+          type: integer
+        balance_after:
+          type: integer
+        reference_type:
+          type: string
+        reference_id:
+          type: string
+        note:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    Profile:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+        tier:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            slug:
+              type: string
+            name:
+              type: string
+            discount_percent:
+              type: number
+        webhook_url:
+          type: string
+        webhook_secret:
+          type: string
+          description: HMAC secret for X-HooshMarket-Signature
+    WebhookEvent:
+      type: object
+      description: >
+        POST body sent to the reseller webhook URL. The raw body is signed with
+        HMAC-SHA256. Header X-HooshMarket-Signature is "sha256=" plus the hex
+        digest. Delivery is retried up to 5 times (1, 5, 15, 60 and 360 minutes).
+      required: [id, type, created_at, data]
+      properties:
+        id:
+          type: string
+          example: evt_15
+        type:
+          type: string
+          enum: [order.delivered, order.failed]
+        created_at:
+          type: string
+          format: date-time
+        data:
+          $ref: '#/components/schemas/Order'

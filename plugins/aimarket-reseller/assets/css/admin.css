@@ -1,0 +1,34 @@
+.hmr-admin {
+  direction: rtl;
+  font-family: "Vazirmatn", Tahoma, sans-serif;
+}
+
+.hmr-admin .hmr-card-form,
+.hmr-admin form.hmr-card-form {
+  background: #fff;
+  border: 1px solid #dcdcde;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 0 20px;
+  max-width: 720px;
+}
+
+.hmr-admin .hmr-muted {
+  color: #646970;
+}
+
+.hmr-admin .hmr-filters .button {
+  margin-left: 6px;
+}
+
+.hmr-admin table.widefat th,
+.hmr-admin table.widefat td {
+  text-align: right;
+}
+
+.hmr-admin input[type="text"],
+.hmr-admin input[type="number"],
+.hmr-admin textarea,
+.hmr-admin select {
+  min-width: 180px;
+}
