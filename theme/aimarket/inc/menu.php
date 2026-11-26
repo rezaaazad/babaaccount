@@ -75,7 +75,7 @@ function aim_t_menu_popular_tab() {
 
 /** Product categories that have products, minus "Uncategorized". */
 function aim_t_menu_cats( $parent ) {
-	$cats = get_terms( [
+	$cats = aim_t_cached_terms( [
 		'taxonomy'   => 'product_cat',
 		'hide_empty' => true,
 		'parent'     => (int) $parent,

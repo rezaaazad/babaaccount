@@ -1,0 +1,19 @@
+name: Audit syntax checks
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: |
+          php --version
+          find theme/aimarket plugins -type f -name '*.php' -print0 | xargs -0 -r -n1 php -l
+      - name: JavaScript syntax
+        run: find theme/aimarket plugins -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+      - name: Bundled plugin consistency
+        run: bin/build-bundled.sh --check

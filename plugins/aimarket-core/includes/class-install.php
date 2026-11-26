@@ -3,7 +3,7 @@ defined( 'ABSPATH' ) || exit;
 
 class AIM_Install {
 
-	const DB_VERSION = '2';
+	const DB_VERSION = '3';
 
 	public static function activate() {
 		self::create_tables();
@@ -19,6 +19,12 @@ class AIM_Install {
 
 	public static function maybe_upgrade() {
 		if ( get_option( 'aim_db_version' ) !== self::DB_VERSION ) {
+			global $wpdb;
+			$table = self::table( 'alerts' );
+			if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) === $table ) {
+				// Keep the oldest pending subscription; sent history is untouched.
+				$wpdb->query( $wpdb->prepare( "DELETE newer FROM %i newer INNER JOIN %i older ON newer.product_id = older.product_id AND newer.user_id = older.user_id AND newer.type = older.type AND newer.id > older.id WHERE newer.status = 'pending' AND older.status = 'pending'", $table, $table ) );
+			}
 			self::create_tables();
 			update_option( 'aim_db_version', self::DB_VERSION );
 		}
@@ -68,10 +74,12 @@ class AIM_Install {
 			phone varchar(20) NOT NULL DEFAULT '',
 			type varchar(10) NOT NULL DEFAULT 'stock',
 			status varchar(10) NOT NULL DEFAULT 'pending',
+			pending_slot tinyint GENERATED ALWAYS AS (CASE WHEN status = 'pending' THEN 1 ELSE NULL END) STORED,
 			created_at datetime NOT NULL,
 			sent_at datetime DEFAULT NULL,
 			PRIMARY KEY  (id),
 			KEY product_pending (product_id,type,status),
+			UNIQUE KEY unique_pending (product_id,user_id,type,pending_slot),
 			KEY user_id (user_id)
 		) $charset;" );
 	}

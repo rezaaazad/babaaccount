@@ -13,6 +13,27 @@ while ( have_posts() ) :
 		continue;
 	}
 	$plans    = aim_t_plans( $product );
+	if ( $product->is_type( [ 'grouped', 'external' ] ) ) {
+		wc_get_template_part( 'content', 'single-product' );
+		continue;
+	}
+	// The custom layout supplies these visual sections itself.
+	foreach ( [ 'woocommerce_template_single_title' => 5, 'woocommerce_template_single_rating' => 10, 'woocommerce_template_single_price' => 10, 'woocommerce_template_single_excerpt' => 20, 'woocommerce_template_single_add_to_cart' => 30, 'woocommerce_template_single_meta' => 40, 'woocommerce_template_single_sharing' => 50, 'aim_theme_delivery_badge' => 6 ] as $callback => $priority ) {
+		remove_action( 'woocommerce_single_product_summary', $callback, $priority );
+	}
+	remove_action( 'woocommerce_after_single_product_summary', 'woocommerce_output_product_data_tabs', 10 );
+	remove_action( 'woocommerce_after_single_product_summary', 'woocommerce_upsell_display', 15 );
+	remove_action( 'woocommerce_after_single_product_summary', 'woocommerce_output_related_products', 20 );
+	if ( ! $plans ) {
+		do_action( 'woocommerce_before_single_product' );
+		echo '<div class="container pd-title"><p class="pd-stock is-out">در حال حاضر موجود نیست</p></div>';
+		if ( WC()->structured_data ) {
+			WC()->structured_data->generate_product_data( $product );
+		}
+		do_action( 'woocommerce_after_single_product' );
+		continue;
+	}
+	do_action( 'woocommerce_before_single_product' );
 	$cat      = aim_t_primary_cat( $product );
 	$shop_url = wc_get_page_permalink( 'shop' );
 	$mode     = class_exists( 'AIM_Inventory' ) ? AIM_Inventory::delivery_mode( $product->get_id() ) : '';
@@ -48,7 +69,7 @@ while ( have_posts() ) :
 	$after = (array) aim_t_opt( 'manual' === $mode ? 'p_after_manual' : 'p_after_auto' );
 	?>
 
-	<section class="pd-hero<?php echo $in_stock ? '' : ' is-out'; ?>">
+	<section <?php wc_product_class( 'pd-hero' . ( $in_stock ? '' : ' is-out' ), $product ); ?>>
 		<div class="hero-grid" aria-hidden="true"></div>
 		<div class="container pd-hero-in">
 			<?php aim_t_breadcrumb( $trail ); ?>
@@ -202,7 +223,8 @@ while ( have_posts() ) :
 			<?php aim_t_head( aim_t_mark( aim_t_opt( 'p_reviews_title' ) ), aim_t_opt( 'p_reviews_text' ) ); ?>
 			<?php
 			$counts = $product->get_rating_counts();
-			$list   = get_comments( [ 'post_id' => $product->get_id(), 'status' => 'approve', 'type' => 'review', 'number' => 10 ] );
+			$review_page = isset( $_GET['reviews_page'] ) && is_scalar( $_GET['reviews_page'] ) ? max( 1, absint( wp_unslash( $_GET['reviews_page'] ) ) ) : 1;
+			$list   = get_comments( [ 'post_id' => $product->get_id(), 'status' => 'approve', 'type' => 'review', 'number' => 10, 'offset' => 10 * ( $review_page - 1 ) ] );
 			?>
 			<div class="rv">
 				<aside class="rv-sum">
@@ -215,7 +237,7 @@ while ( have_posts() ) :
 							<li><span><?php echo esc_html( aim_t_fa( $s ) ); ?> <i class="ic-star-fill"></i></span><span class="rv-bar"><i style="width:<?php echo esc_attr( $reviews ? $c / $reviews * 100 : 0 ); ?>%"></i></span><span><?php echo esc_html( aim_t_fa( $c ) ); ?></span></li>
 						<?php endfor; ?>
 					</ul>
-					<a class="pc-btn" href="#review-form"><i class="ic-edit-line"></i>ثبت نظر</a>
+					<?php if ( comments_open() ) : ?><a class="pc-btn" href="#review-form"><i class="ic-edit-line"></i>ثبت نظر</a><?php endif; ?>
 				</aside>
 				<div class="rv-list">
 					<?php if ( $list ) : ?>
@@ -237,7 +259,9 @@ while ( have_posts() ) :
 						<div class="rv-empty"><i class="ic-chat-smile-3-line"></i><b>هنوز نظری ثبت نشده</b><small>اولین نفری باش که تجربه‌اش را می‌نویسد.</small></div>
 					<?php endif; ?>
 
-					<div class="rv-form" id="review-form">
+					<?php if ( $review_page > 1 ) : ?><a href="<?php echo esc_url( add_query_arg( 'reviews_page', $review_page - 1, get_permalink() ) . '#reviews' ); ?>">نظرات قبلی</a><?php endif; ?>
+					<?php if ( $reviews > 10 * $review_page ) : ?><a href="<?php echo esc_url( add_query_arg( 'reviews_page', $review_page + 1, get_permalink() ) . '#reviews' ); ?>">نظرات بیشتر</a><?php endif; ?>
+					<?php if ( comments_open() ) : ?><div class="rv-form" id="review-form">
 						<?php
 						if ( get_option( 'woocommerce_review_rating_verification_required' ) === 'no' || wc_customer_bought_product( '', get_current_user_id(), $product->get_id() ) ) {
 							comment_form( [
@@ -252,7 +276,7 @@ while ( have_posts() ) :
 								'fields'               => [
 									'author' => '<p class="comment-form-author"><label for="author">نام</label><input id="author" name="author" type="text" required></p>',
 									'email'   => '<p class="comment-form-email"><label for="email">ایمیل (نمایش داده نمی‌شود)</label><input id="email" name="email" type="email" required></p>',
-									'cookies' => '',
+									'cookies' => get_option( 'show_comments_cookies_opt_in' ) ? '<p class="comment-form-cookies-consent"><input id="wp-comment-cookies-consent" name="wp-comment-cookies-consent" type="checkbox" value="yes"><label for="wp-comment-cookies-consent">' . esc_html__( 'Save my name and email in this browser for the next time I comment.' ) . '</label></p>' : '',
 								],
 								'comment_field'        => '<div class="rv-rate"><span>امتیاز تو:</span><select name="rating" id="rating" required><option value="">انتخاب کن</option><option value="5">۵ — عالی</option><option value="4">۴ — خوب</option><option value="3">۳ — متوسط</option><option value="2">۲ — ضعیف</option><option value="1">۱ — خیلی بد</option></select></div><p class="comment-form-comment"><label for="comment">نظر تو</label><textarea id="comment" name="comment" rows="4" required placeholder="از کیفیت اکانت، سرعت تحویل و پشتیبانی بنویس."></textarea></p>',
 							] );
@@ -260,7 +284,7 @@ while ( have_posts() ) :
 							echo '<p class="rv-login">فقط خریداران این محصول می‌توانند نظر ثبت کنند.</p>';
 						}
 						?>
-					</div>
+					</div><?php endif; ?>
 				</div>
 			</div>
 		</div>
@@ -279,5 +303,8 @@ while ( have_posts() ) :
 	<?php endif; ?>
 
 	<?php
+	do_action( 'woocommerce_single_product_summary' );
+	do_action( 'woocommerce_after_single_product_summary' );
+	do_action( 'woocommerce_after_single_product' );
 endwhile;
 get_footer();

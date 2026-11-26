@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AIM Panel — ماژول فروش اکانت
  * Description: ماژول فروش اکانت و اشتراک دیجیتال برای AIM Panel: انبار اکانت رمزنگاری‌شده، تحویل خودکار و دستی پس از پرداخت، اشتراک‌های فعال و یادآوری تمدید، تب «اکانت و تحویل» در محصول و بخش «اکانت‌های من» برای مشتری.
- * Version: 1.8.1
+ * Version: 1.8.2
  * Requires at least: 6.5
  * Tested up to: 7.1
  * Requires PHP: 8.0
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'AIMA_VERSION', '1.8.1' );
+define( 'AIMA_VERSION', '1.8.2' );
 define( 'AIMA_DIR', plugin_dir_path( __FILE__ ) );
 define( 'AIMA_URL', plugin_dir_url( __FILE__ ) );
 
@@ -48,6 +48,9 @@ add_action( 'aim_loaded', function () {
 } );
 
 add_action( 'admin_notices', function () {
+	if ( current_user_can( 'manage_options' ) && ! defined( 'AIM_SECRET_KEY' ) ) {
+		echo '<div class="notice notice-warning"><p>کلید اختصاصی رمزنگاری اکانت‌ها تنظیم نشده است؛ قبل از تغییر کلیدهای امنیتی وردپرس نسخه پشتیبان بگیرید.</p></div>';
+	}
 	if ( ! did_action( 'aim_loaded' ) && current_user_can( 'activate_plugins' ) ) {
 		echo '<div class="notice notice-error"><p>ماژول فروش اکانت برای کار کردن به افزونهٔ «AIM Panel — پنل مدیریت فروشگاه» نیاز دارد.</p></div>';
 	}

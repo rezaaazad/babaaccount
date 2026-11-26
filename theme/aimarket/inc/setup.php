@@ -4,7 +4,7 @@
  * the site owner.
  *
  *  - On activation, the bundled plugins (AIM Panel and its accounts module,
- *    shipped in inc/bundled/ by dev/build-zip.sh) are installed if missing
+ *    shipped in inc/bundled/ by bin/build-bundled.sh) are installed if missing
  *    and activated right away.
  *  - The bundled plugins always follow the theme: installing or updating the
  *    theme brings its plugins to the versions in inc/bundled/versions.json
@@ -144,12 +144,28 @@ function aim_t_bundled_status() {
 
 /**
  * Bring the installed plugins up to the versions shipped with this theme
- * (inc/bundled/versions.json, written by dev/build-zip.sh). A plugin that is
+ * (inc/bundled/versions.json, written by bin/build-bundled.sh). A plugin that is
  * already newer (uploaded by hand) is left alone; one that is not installed
  * yet is skipped — the setup page installs it. Used by the admin_init check,
  * the theme-update hook and the setup-page button; never downgrades.
  */
 function aim_t_bundled_sync() {
+	global $wpdb;
+	if ( ! current_user_can( 'update_plugins' ) ) {
+		return [ 'done' => [], 'failed' => true ];
+	}
+	$lock = 'aim_bundle_' . md5( $wpdb->prefix );
+	if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 0)', $lock ) ) ) {
+		return [ 'done' => [], 'failed' => true ];
+	}
+	try {
+		return aim_t_bundled_sync_locked();
+	} finally {
+		$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+	}
+}
+
+function aim_t_bundled_sync_locked() {
         require_once ABSPATH . 'wp-admin/includes/plugin.php';
         $done   = [];
         $failed = false;
@@ -174,6 +190,10 @@ function aim_t_bundled_sync() {
  * until it succeeds.
  */
 add_action( 'admin_init', function () {
+	global $pagenow;
+	if ( ! in_array( $pagenow, [ 'update-core.php', 'update.php', 'themes.php' ], true ) ) {
+		return;
+	}
         $file  = get_template_directory() . '/inc/bundled/versions.json';
         $raw   = file_exists( $file ) ? (string) file_get_contents( $file ) : ''; // phpcs:ignore WordPress.WP.AlternativeFunctions
         $mark  = wp_get_theme( get_template() )->get( 'Version' ) . '|' . md5( $raw );
@@ -253,7 +273,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
         }
         $uri = get_template_directory_uri();
         $dir = get_template_directory();
-        wp_enqueue_style( 'aim-font', 'https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css', [], null );
+	wp_enqueue_style( 'aim-font', $uri . '/assets/css/fonts.css', [], filemtime( $dir . '/assets/css/fonts.css' ) );
         wp_enqueue_style( 'aim-icons', $uri . '/assets/css/icons.css', [], filemtime( $dir . '/assets/css/icons.css' ) );
         wp_enqueue_style( 'aim-theme-setup', $uri . '/assets/css/setup.css', [], filemtime( $dir . '/assets/css/setup.css' ) );
         wp_enqueue_script( 'aim-theme-setup', $uri . '/assets/js/setup.js', [], filemtime( $dir . '/assets/js/setup.js' ), true );
@@ -263,10 +283,14 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 // Remind on other admin screens until the requirements are in place.
 add_action( 'admin_notices', function () {
         $screen = get_current_screen();
+	if ( ! $screen || ! in_array( $screen->id, [ 'dashboard', 'appearance_page_' . AIM_T_SETUP_PAGE ], true ) ) {
+		return;
+	}
         if ( ! current_user_can( 'activate_plugins' ) || ( $screen && 'appearance_page_' . AIM_T_SETUP_PAGE === $screen->id ) || ( isset( $_GET['page'] ) && 'aimarket' === $_GET['page'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
                 return;
         }
-        if ( in_array( 'missing', aim_t_requirement_status(), true ) || in_array( 'installed', aim_t_requirement_status(), true ) ) {
+	$status = aim_t_requirement_status();
+	if ( in_array( 'missing', $status, true ) || in_array( 'installed', $status, true ) ) {
                 printf( '<div class="notice notice-warning"><p>قالب هوش‌مارکت هنوز کامل راه‌اندازی نشده است. <a class="button button-primary" href="%s">راه‌اندازی خودکار</a></p></div>', esc_url( admin_url( 'themes.php?page=' . AIM_T_SETUP_PAGE ) ) );
         }
 } );

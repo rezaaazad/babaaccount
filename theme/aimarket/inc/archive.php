@@ -23,6 +23,11 @@ function aim_t_brand_tax() {
  */
 function aim_t_archive_facets( $term = null, $search = '' ) {
 	global $wpdb;
+	$key = aim_t_cache_key( 'facets', [ $term instanceof WP_Term ? $term->term_id : 0, $search ] );
+	$cached = get_transient( $key );
+	if ( false !== $cached ) {
+		return $cached;
+	}
 	$args = [ 'post_type' => 'product', 'post_status' => 'publish', 'fields' => 'ids', 'posts_per_page' => 2000, 'no_found_rows' => true ];
 	if ( $term instanceof WP_Term ) {
 		$args['tax_query'] = [ [ 'taxonomy' => $term->taxonomy, 'terms' => $term->term_id ] ]; // phpcs:ignore WordPress.DB.SlowDBQuery
@@ -33,6 +38,7 @@ function aim_t_archive_facets( $term = null, $search = '' ) {
 	$ids = ( new WP_Query( $args ) )->posts;
 	$out = [ 'brands' => [], 'min' => 0, 'max' => 0 ];
 	if ( ! $ids ) {
+		set_transient( $key, $out, 6 * HOUR_IN_SECONDS );
 		return $out;
 	}
 
@@ -53,6 +59,7 @@ function aim_t_archive_facets( $term = null, $search = '' ) {
 		$out['min'] = (float) $range->lo;
 		$out['max'] = (float) $range->hi;
 	}
+	set_transient( $key, $out, 6 * HOUR_IN_SECONDS );
 	return $out;
 }
 

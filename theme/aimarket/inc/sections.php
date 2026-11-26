@@ -46,7 +46,7 @@ function aim_t_tag_logo( $text ) {
 		return '';
 	}
 	if ( ! isset( $cache[ $key ] ) ) {
-		$found         = wc_get_products( [ 'status' => 'publish', 'limit' => 1, 's' => $text, 'orderby' => 'popularity', 'order' => 'DESC' ] );
+		$found         = aim_t_cached_products( [ 'status' => 'publish', 'limit' => 1, 's' => $text, 'orderby' => 'popularity', 'order' => 'DESC' ] );
 		$cache[ $key ] = $found ? aim_t_logo( $found[0], 'tag-logo' ) : '';
 	}
 	return $cache[ $key ];
@@ -94,7 +94,7 @@ function aim_t_section_products( $source, $count = 8, array $ids = [], $cat = ''
 		default:
 			$args += [ 'orderby' => 'popularity', 'order' => 'DESC' ];
 	}
-	return wc_get_products( $args );
+	return aim_t_cached_products( $args );
 }
 
 /** Settings each section starts with: the built-in homepage content (aim_t_home()). */
@@ -238,7 +238,7 @@ function aim_t_section_defaults( $name ) {
 				'announce_text' => $home['announce']['text'],
 				'announce_cta'  => $home['announce']['cta'],
 				'announce_url'  => $home['announce']['link'],
-				'logo'          => has_custom_logo() ? wp_get_attachment_image( get_theme_mod( 'custom_logo' ), 'medium', false, [ 'alt' => get_bloginfo( 'name' ) ] ) : '',
+				'logo'          => has_custom_logo() ? wp_get_attachment_image( get_theme_mod( 'custom_logo' ), 'medium', false, [ 'alt' => get_bloginfo( 'name' ), 'loading' => 'eager', 'fetchpriority' => 'auto' ] ) : '',
 				'brand'         => get_bloginfo( 'name' ),
 				'brand_sub'     => 'HOOSH MARKET',
 				'search'        => true,
@@ -289,7 +289,7 @@ function aim_t_footer_product_links( $count ) {
 
 /** @return array[] [ text, url ] for product categories that have products. */
 function aim_t_footer_category_links( $count ) {
-	$cats = get_terms( [ 'taxonomy' => 'product_cat', 'hide_empty' => true, 'number' => $count, 'exclude' => [ (int) get_option( 'default_product_cat' ) ] ] );
+	$cats = aim_t_cached_terms( [ 'taxonomy' => 'product_cat', 'hide_empty' => true, 'number' => $count, 'exclude' => [ (int) get_option( 'default_product_cat' ) ] ] );
 	return is_wp_error( $cats ) ? [] : array_map( fn( $c ) => [ 'text' => $c->name, 'url' => get_term_link( $c ) ], $cats );
 }
 

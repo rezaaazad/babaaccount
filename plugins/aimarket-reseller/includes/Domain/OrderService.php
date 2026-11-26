@@ -161,6 +161,9 @@ final class OrderService
         $this->fulfillment->assertReady();
         $quote = $this->pricing->quote((int) $reseller['tier_id'], $product);
         $total = $quote->priceMinor * $quantity;
+        if ($quote->priceMinor <= 0) {
+            throw new ApiException('invalid_price', 'قیمت همکاری این محصول تنظیم نشده است.', 422);
+        }
         if ($total < 0) {
             throw new ApiException('invalid_amount', 'مبلغ سفارش معتبر نیست.', 422);
         }

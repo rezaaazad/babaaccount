@@ -17,11 +17,11 @@ add_action( 'rest_api_init', function () {
 } );
 
 /** WooCommerce does not load the cart for REST requests by default. */
-function aim_mc_boot() {
+function aim_mc_boot( $create_session = true ) {
 	if ( function_exists( 'wc_load_cart' ) && ( ! WC()->cart || ! WC()->session ) ) {
 		wc_load_cart();
 	}
-	if ( WC()->session && ! WC()->session->has_session() ) {
+	if ( $create_session && WC()->session && ! WC()->session->has_session() ) {
 		WC()->session->set_customer_session_cookie( true );
 	}
 }
@@ -45,7 +45,7 @@ function aim_mc_response( $message = '', $ok = true, $extra = [] ) {
 }
 
 function aim_mc_rest_get() {
-	aim_mc_boot();
+	aim_mc_boot( false );
 	return aim_mc_response();
 }
 

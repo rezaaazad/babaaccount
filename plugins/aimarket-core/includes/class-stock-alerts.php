@@ -69,18 +69,13 @@ class AIM_Stock_Alerts {
 
 		global $wpdb;
 		$table  = AIM_Install::table( 'alerts' );
-		$exists = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table WHERE product_id = %d AND user_id = %d AND type = %s AND status = 'pending'", $product->get_id(), $user, $type ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		if ( $exists ) {
+		$inserted = $wpdb->query( $wpdb->prepare( "INSERT INTO %i (product_id,user_id,phone,type,status,created_at) VALUES (%d,%d,%s,%s,'pending',%s) ON DUPLICATE KEY UPDATE id = id", $table, $product->get_id(), $user, $phone, $type, current_time( 'mysql', true ) ) );
+		if ( false === $inserted ) {
+			return self::fail( 'ثبت اطلاع‌رسانی انجام نشد؛ دوباره تلاش کنید.' );
+		}
+		if ( 0 === $inserted ) {
 			return rest_ensure_response( [ 'ok' => true, 'message' => 'قبلاً ثبت کرده‌اید؛ پیامک اطلاع‌رسانی برایتان ارسال می‌شود.' ] );
 		}
-		$wpdb->insert( $table, [
-			'product_id' => $product->get_id(),
-			'user_id'    => $user,
-			'phone'      => $phone,
-			'type'       => $type,
-			'status'     => 'pending',
-			'created_at' => current_time( 'mysql', true ),
-		] );
 		$msg = 'stock' === $type ? 'ثبت شد؛ به محض موجود شدن، پیامک می‌گیرید.' : 'ثبت شد؛ وقتی تخفیف بخورد، پیامک می‌گیرید.';
 		return rest_ensure_response( [ 'ok' => true, 'message' => $msg ] );
 	}
@@ -117,7 +112,7 @@ class AIM_Stock_Alerts {
 			return;
 		}
 		if ( function_exists( 'as_enqueue_async_action' ) ) {
-			if ( ! as_has_scheduled_action( 'aim_send_alerts', [ $product_id, $type ], 'aimarket' ) ) {
+			if ( ! function_exists( 'as_has_scheduled_action' ) || ! as_has_scheduled_action( 'aim_send_alerts', [ $product_id, $type ], 'aimarket' ) ) {
 				as_enqueue_async_action( 'aim_send_alerts', [ $product_id, $type ], 'aimarket' );
 			}
 		} else {
@@ -157,7 +152,7 @@ class AIM_Stock_Alerts {
 				}
 				$res = AIM_SMS::send_pattern( $row->phone, 'alert_' . $type, [ 'product' => $product->get_name() ] );
 				if ( is_wp_error( $res ) ) {
-					$wpdb->update( $table, [ 'status' => 'pending' ], [ 'id' => $row->id ] ); // Not sent: keep it pending.
+					$wpdb->query( $wpdb->prepare( "UPDATE IGNORE %i SET status = 'pending', sent_at = NULL WHERE id = %d", $table, $row->id ) ); // If a new pending row already exists, it represents the same subscription.
 					self::$last_error = $res->get_error_message();
 					AIM_Activity::log( 'alert_failed', 'ارسال اعلان ناموفق: ' . $res->get_error_message(), 'product', $product_id );
 					break; // Gateway problem: leave the rest pending for the next trigger.

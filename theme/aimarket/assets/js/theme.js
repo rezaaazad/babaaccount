@@ -1,10 +1,53 @@
 /* Storefront behaviour: colour mode, header search, drawer, rails, finder, steps, copy, newsletter. */
+let aimNoncePromise;
+function aimFreshNonce(force = false) {
+	if (force) aimNoncePromise = null;
+	if (!aimNoncePromise) {
+		aimNoncePromise = fetch(AIMT.nonceUrl, { method: 'POST', credentials: 'same-origin', cache: 'no-store' })
+			.then((res) => { if (!res.ok) throw new Error('nonce_failed'); return res.json(); })
+			.then((json) => { if (!json.success || !json.data?.nonce) throw new Error('nonce_failed'); AIMT.nonce = json.data.nonce; return AIMT.nonce; })
+			.catch((err) => { aimNoncePromise = null; throw err; });
+	}
+	return aimNoncePromise;
+}
+const aimDrawerState = new WeakMap();
+function aimActivateDrawer(drawer) {
+	if (aimDrawerState.has(drawer)) return;
+	const state = { trigger: document.activeElement, background: [] };
+	for (const el of document.body.children) {
+		if (el === drawer || el.contains(drawer) || ['SCRIPT', 'STYLE', 'LINK'].includes(el.tagName)) continue;
+		state.background.push([el, el.inert, el.getAttribute('aria-hidden')]);
+		el.inert = true;
+		el.setAttribute('aria-hidden', 'true');
+	}
+	aimDrawerState.set(drawer, state);
+	const first = drawer.querySelector('button, a[href], input, [tabindex="0"]');
+	if (first) first.focus();
+}
+function aimDeactivateDrawer(drawer) {
+	const state = aimDrawerState.get(drawer);
+	if (!state) return;
+	state.background.forEach(([el, inert, aria]) => { el.inert = inert; if (aria === null) el.removeAttribute('aria-hidden'); else el.setAttribute('aria-hidden', aria); });
+	aimDrawerState.delete(drawer);
+	if (state.trigger?.isConnected) state.trigger.focus();
+}
+document.addEventListener('keydown', (e) => {
+	if (e.key !== 'Tab') return;
+	const drawer = [...document.querySelectorAll('[data-drawer], [data-minicart]')].find((el) => aimDrawerState.has(el));
+	if (!drawer) return;
+	const items = [...drawer.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), [tabindex="0"]')].filter((el) => el.getClientRects().length);
+	if (!items.length) return;
+	const first = items[0], last = items[items.length - 1];
+	if (e.shiftKey && (document.activeElement === first || !drawer.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+	else if (!e.shiftKey && (document.activeElement === last || !drawer.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+});
 (function () {
 	'use strict';
 	const $ = (s, r) => (r || document).querySelector(s);
 	const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
 	const FA = '۰۱۲۳۴۵۶۷۸۹';
 	const toEn = (s) => String(s).replace(/[۰-۹]/g, (d) => FA.indexOf(d));
+	document.addEventListener('change', (e) => { if (e.target.matches('[data-auto-submit]') && e.target.form) e.target.form.submit(); });
 
 	function toast(msg) {
 		const stack = $('[data-toasts]');
@@ -34,10 +77,10 @@
 	// ---- Announcement bar (remembered per browser) ----
 	const ann = $('[data-announce]');
 	if (ann) {
-		try { if (localStorage.getItem('aim-announce') === ann.textContent.trim().length + '') ann.remove(); } catch (e) { /* ignore */ }
+		try { if (localStorage.getItem('aim-announce') === ann.textContent.trim()) ann.remove(); } catch (e) { /* ignore */ }
 		ann.addEventListener('click', (e) => {
 			if (!e.target.closest('[data-announce-close]')) return;
-			try { localStorage.setItem('aim-announce', ann.textContent.trim().length + ''); } catch (err) { /* ignore */ }
+			try { localStorage.setItem('aim-announce', ann.textContent.trim()); } catch (err) { /* ignore */ }
 			ann.remove();
 		});
 	}
@@ -65,9 +108,9 @@
 
 	// ---- Drawer ----
 	const drawer = $('[data-drawer]');
-	function closeDrawer() { if (drawer) { drawer.hidden = true; document.body.style.overflow = ''; } }
+	function closeDrawer() { if (drawer) { drawer.hidden = true; aimDeactivateDrawer(drawer); document.body.style.overflow = ''; } }
 	document.addEventListener('click', (e) => {
-		if (e.target.closest('[data-drawer-open]') && drawer) { drawer.hidden = false; document.body.style.overflow = 'hidden'; return; }
+		if (e.target.closest('[data-drawer-open]') && drawer) { drawer.hidden = false; document.body.style.overflow = 'hidden'; aimActivateDrawer(drawer); return; }
 		if (e.target.closest('[data-drawer-close]') || e.target === drawer) closeDrawer();
 		if (drawer && !drawer.hidden && e.target.closest('.dm-body a')) closeDrawer();
 	});
@@ -160,6 +203,14 @@
 
 	function initFinder(finder) {
 		if (!once(finder, 'finderReady')) return;
+		finder.addEventListener('keydown', (e) => {
+			const tab = e.target.closest('[data-use]');
+			if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+			const tabs = $$('[data-use]', finder);
+			const i = tabs.indexOf(tab);
+			const next = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (i + (e.key === 'ArrowLeft' ? 1 : -1) + tabs.length) % tabs.length;
+			e.preventDefault(); tabs[next].focus(); tabs[next].click();
+		});
 		finder.addEventListener('click', (e) => {
 			const tab = e.target.closest('[data-use]');
 			if (!tab) return;
@@ -226,7 +277,7 @@
 			const btn = nl.querySelector('button');
 			btn.disabled = true;
 			try {
-				const res = await fetch(AIMT.rest + 'newsletter', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: nl.phone.value }) });
+				const res = await fetch(AIMT.rest + 'newsletter', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: nl.phone.value, website: nl.website.value }) });
 				const json = await res.json();
 				msg.textContent = json.message || '';
 				msg.classList.toggle('is-err', !res.ok);
@@ -390,7 +441,7 @@
 		document.addEventListener('change', (e) => { if (e.target.matches('[data-cart-form] [data-qty] input')) submit(e.target.closest('.ci')); });
 		document.addEventListener('keydown', (e) => {
 			// Enter in the coupon box applies the coupon instead of "update cart".
-			if (e.key === 'Enter' && e.target.id === 'coupon_code') { e.preventDefault(); $('[name=apply_coupon]').click(); }
+			if (e.key === 'Enter' && e.target.id === 'coupon_code') { e.preventDefault(); $('[name=apply_coupon]')?.click(); }
 		});
 		// After an AJAX update WooCommerce replaces the form and .cart_totals; refresh the mobile bar from it.
 		if (window.jQuery) {
@@ -460,7 +511,9 @@
 	const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 	let loaded = false;
 
-	async function call(path, data) {
+	async function call(path, data, retry = true) {
+		try {
+		await aimFreshNonce();
 		const res = await fetch(AIMT.rest + path, {
 			method: data ? 'POST' : 'GET',
 			credentials: 'same-origin',
@@ -469,7 +522,15 @@
 		});
 		let json = {};
 		try { json = await res.json(); } catch (e) { /* non-JSON */ }
-		return json;
+		if (retry && res.status === 403 && json.code === 'rest_cookie_invalid_nonce') {
+			await aimFreshNonce(true);
+			return call(path, data, false);
+		}
+		if (!res.ok && !json.message) throw new Error('request_failed');
+		return res.ok ? json : Object.assign(json, { ok: false });
+		} catch (e) {
+			return { ok: false, message: 'خطا در ارتباط، دوباره تلاش کنید' };
+		}
 	}
 
 	function render(json) {
@@ -494,14 +555,16 @@
 
 	function open() {
 		drawer.hidden = false;
+		aimActivateDrawer(drawer);
 		document.body.style.overflow = 'hidden';
 		void drawer.offsetWidth; // apply the closed state first so the slide-in transition runs
 		drawer.classList.add('is-open');
-		if (!loaded) call('minicart').then(render);
+		if (!loaded) call('minicart').then((json) => { if (json.ok === false) say(json.message, 'err'); else render(json); });
 		setTimeout(() => { const b = $('[data-minicart-close]', drawer); if (b) b.focus(); }, 60);
 	}
 	function close() {
 		drawer.classList.remove('is-open');
+		aimDeactivateDrawer(drawer);
 		document.body.style.overflow = '';
 		setTimeout(() => { drawer.hidden = true; }, 220);
 	}
@@ -520,9 +583,11 @@
 		if (!b) return;
 		const item = b.closest('[data-key]');
 		item.classList.add('is-busy');
-		const json = await call('minicart/update', { key: item.dataset.key, quantity: Number(b.dataset.mcQty) });
-		render(json);
-		if (json.message) say(json.message, json.ok === false ? 'err' : 'ok');
+		try {
+			const json = await call('minicart/update', { key: item.dataset.key, quantity: Number(b.dataset.mcQty) });
+			if (typeof json.html === 'string') render(json);
+			if (json.message) say(json.message, json.ok === false ? 'err' : 'ok');
+		} finally { item.classList.remove('is-busy'); }
 	});
 
 	// Fly a copy of the product tile from the button to the header cart icon.
@@ -570,7 +635,7 @@
 			const [json] = await Promise.all([call('minicart/add', payload), fly(cartBtn)]);
 			cartBtn.disabled = false;
 			cartBtn.classList.remove('is-loading');
-			render(json);
+			if (typeof json.html === 'string') render(json);
 			if (json.ok === false) {
 				open();
 				say(json.message || 'افزودن به سبد ناموفق بود.', 'err');
@@ -592,6 +657,7 @@
 		if (!b || b.disabled) return;
 		b.disabled = true;
 		try {
+			await aimFreshNonce();
 			const res = await fetch(AIMT.rest + 'alerts/subscribe', {
 				method: 'POST',
 				credentials: 'same-origin',

@@ -4,7 +4,7 @@
  */
 defined( 'ABSPATH' ) || exit;
 do_action( 'woocommerce_cart_is_empty' );
-$best = wc_get_products( [ 'status' => 'publish', 'limit' => 4, 'orderby' => 'popularity' ] );
+$best = aim_t_cached_products( [ 'status' => 'publish', 'limit' => 4, 'orderby' => 'popularity' ] );
 ?>
 <div class="co-empty">
 	<?php echo aim_t_illus( 'cart', 'co-art' ); // phpcs:ignore ?>

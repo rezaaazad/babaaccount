@@ -57,7 +57,7 @@ $a = $args;
 			<?php // Both load lazily and the hidden one is display:none, so only the artwork of the current mode is downloaded; phones get the 800px copy. ?>
 			<figure class="hero-art" aria-hidden="true">
 				<?php foreach ( [ 'light' => $a['art_light'] ?: $a['art_dark'], 'dark' => $a['art_dark'] ?: $a['art_light'] ] as $mode => $src ) : ?>
-					<img class="is-<?php echo esc_attr( $mode ); ?>" src="<?php echo esc_url( $src ); ?>"<?php echo aim_t_hero_srcset( $src ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_url(). ?> alt="" width="1536" height="1024" loading="lazy" decoding="async">
+					<img class="is-<?php echo esc_attr( $mode ); ?>" src="<?php echo esc_url( $src ); ?>"<?php echo aim_t_hero_srcset( $src ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_url(). ?> alt="" width="1536" height="1024" loading="<?php echo 'light' === $mode ? 'eager' : 'lazy'; ?>" fetchpriority="<?php echo 'light' === $mode ? 'high' : 'auto'; ?>" decoding="async">
 				<?php endforeach; ?>
 			</figure>
 		<?php endif; ?>

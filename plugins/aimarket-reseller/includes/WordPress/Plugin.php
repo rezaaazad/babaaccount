@@ -86,17 +86,21 @@ final class Plugin
         $bridge = new AimarketFulfillment($db);
         $pricing = new Pricing($db, $tables);
         $sender = static function (string $url, string $body, array $headers): array {
-            $response = wp_remote_post($url, [
-                'timeout' => 10,
+            if (!Crm::validWebhook($url)) {
+                return ['code' => 0, 'error' => 'connection_failed'];
+            }
+            $response = wp_safe_remote_post($url, [
+                'timeout' => 5,
+                'reject_unsafe_urls' => true,
                 'redirection' => 0,
                 'headers' => $headers,
                 'body' => $body,
             ]);
             if (is_wp_error($response)) {
-                return ['code' => 0, 'error' => $response->get_error_message()];
+                return ['code' => 0, 'error' => 'connection_failed'];
             }
             $code = (int) wp_remote_retrieve_response_code($response);
-            $error = $code >= 200 && $code < 300 ? '' : 'HTTP ' . $code;
+            $error = $code >= 200 && $code < 300 ? '' : 'http_' . $code;
             return ['code' => $code, 'error' => $error];
         };
         self::$services = new Services(
@@ -120,6 +124,9 @@ final class Plugin
 
     private static function crypto(): Crypto
     {
+        if (defined('HMR_CRYPTO_KEY')) {
+            return Crypto::fromExport(HMR_CRYPTO_KEY);
+        }
         $stored = get_option('hmr_crypto_key');
         if (!is_string($stored) || $stored === '') {
             $crypto = Crypto::generate();

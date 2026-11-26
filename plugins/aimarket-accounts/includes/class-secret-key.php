@@ -54,45 +54,22 @@ class AIM_Secret_Key {
 		return "define( 'AIM_SECRET_KEY', '" . $key . "' ); // هوش‌مارکت: کلید رمزنگاری اکانت‌ها — پاک یا عوض نکنید.";
 	}
 
-	public static function rest_create() {
+	public static function rest_create( WP_REST_Request $request ) {
+		if ( ! wp_verify_nonce( $request->get_header( 'X-WP-Nonce' ), 'wp_rest' ) || ! current_user_can( 'manage_options' ) ) {
+			return self::fail( 'درخواست معتبر نیست.' );
+		}
 		$status = self::status();
 		if ( $status['defined'] ) {
 			return self::fail( 'کلید اختصاصی از قبل در wp-config.php تعریف شده است.' );
 		}
 		$key = self::new_key();
-		if ( ! $status['writable'] ) {
-			return new WP_REST_Response( [
-				'ok'      => false,
-				'message' => 'هاست اجازهٔ تغییر wp-config.php را نمی‌دهد. خط زیر را دستی اضافه کنید.',
-				'line'    => self::line( $key ),
-			], 409 );
-		}
-
-		$path     = $status['path'];
-		$original = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions
-		if ( false === $original || ! preg_match( '/^\s*<\?php/', $original ) || ! str_contains( $original, 'DB_NAME' ) ) {
-			return self::fail( 'فایل wp-config.php شناخته نشد؛ چیزی تغییر نکرد.' );
-		}
-		if ( str_contains( $original, 'AIM_SECRET_KEY' ) ) {
-			return self::fail( 'در wp-config.php از قبل خطی با AIM_SECRET_KEY هست؛ آن را بررسی کنید.' );
-		}
-
-		// Right after the opening tag: before anything that loads WordPress.
-		$updated = preg_replace( '/^(\s*<\?php[^\n]*\n)/', '$1' . self::line( $key ) . "\n", $original, 1 );
-		if ( false === file_put_contents( $path, $updated, LOCK_EX ) || file_get_contents( $path ) !== $updated ) { // phpcs:ignore WordPress.WP.AlternativeFunctions
-			file_put_contents( $path, $original, LOCK_EX ); // phpcs:ignore WordPress.WP.AlternativeFunctions
-			return self::fail( 'نوشتن در wp-config.php کامل نشد و فایل به حالت قبل برگشت.' );
-		}
-		if ( function_exists( 'opcache_invalidate' ) ) {
-			opcache_invalidate( $path, true );
-		}
-
-		AIM_Activity::log( 'secret_key_created', 'کلید اختصاصی رمزنگاری در wp-config.php ثبت شد', 'settings' );
-		return rest_ensure_response( [
-			'ok'      => true,
-			'message' => 'کلید ساخته و در wp-config.php ثبت شد. اطلاعات اکانت‌های فعلی خودکار با کلید جدید رمز می‌شوند.',
-			'key'     => $key,
-		] );
+		$response = new WP_REST_Response( [
+			'ok'      => false,
+			'message' => 'ابتدا نسخه پشتیبان بگیرید و خط زیر را دستی به wp-config.php اضافه کنید.',
+			'line'    => self::line( $key ),
+		], 409 );
+		$response->header( 'Cache-Control', 'no-store, private' );
+		return $response;
 	}
 
 	private static function fail( $message ) {

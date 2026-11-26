@@ -142,6 +142,9 @@ class AIM_SMS {
         }
 
         private static function log( $phone, $event, $vars ) {
+                if ( ! in_array( wp_get_environment_type(), [ 'local', 'development' ], true ) ) {
+                        return new WP_Error( 'aim_sms_config', 'درگاه پیامک در محیط اصلی باید تنظیم شود.' );
+                }
                 $log   = get_option( 'aim_sms_log', [] );
                 array_unshift( $log, [
                         'phone' => $phone,

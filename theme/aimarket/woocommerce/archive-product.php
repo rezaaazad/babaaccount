@@ -19,13 +19,13 @@ $from     = $total ? ( $paged - 1 ) * $per_page + 1 : 0;
 $to       = min( $total, $paged * $per_page );
 $default  = (int) get_option( 'default_product_cat' );
 $cats     = get_terms( [ 'taxonomy' => 'product_cat', 'hide_empty' => true, 'parent' => 0, 'exclude' => [ $default ] ] );
-$orderby  = isset( $_GET['orderby'] ) ? wc_clean( wp_unslash( $_GET['orderby'] ) ) : 'popularity';
+$orderby  = isset( $_GET['orderby'] ) && is_scalar( $_GET['orderby'] ) ? wc_clean( wp_unslash( $_GET['orderby'] ) ) : 'popularity';
 $sorts    = [ 'popularity' => 'پرفروش‌ترین', 'date' => 'جدیدترین', 'price' => 'ارزان‌ترین', 'price-desc' => 'گران‌ترین', 'rating' => 'بیشترین امتیاز' ];
-$min      = isset( $_GET['min_price'] ) ? absint( aim_en_digits( wp_unslash( $_GET['min_price'] ) ) ) : '';
-$max      = isset( $_GET['max_price'] ) ? absint( aim_en_digits( wp_unslash( $_GET['max_price'] ) ) ) : '';
+$min      = isset( $_GET['min_price'] ) && is_scalar( $_GET['min_price'] ) ? absint( aim_en_digits( wc_clean( wp_unslash( $_GET['min_price'] ) ) ) ) : '';
+$max      = isset( $_GET['max_price'] ) && is_scalar( $_GET['max_price'] ) ? absint( aim_en_digits( wc_clean( wp_unslash( $_GET['max_price'] ) ) ) ) : '';
 $instock  = ! empty( $_GET['instock'] );
 $onsale   = ! empty( $_GET['onsale'] );
-$brands_q = isset( $_GET['brand'] ) ? array_filter( array_map( 'sanitize_title', (array) wp_unslash( $_GET['brand'] ) ) ) : [];
+$brands_q = isset( $_GET['brand'] ) ? array_filter( array_map( 'sanitize_title', array_filter( (array) wp_unslash( $_GET['brand'] ), 'is_scalar' ) ) ) : [];
 $active   = (int) (bool) $min + (int) (bool) $max + (int) $instock + (int) $onsale + count( $brands_q );
 $facets   = aim_t_archive_facets( $term, is_search() ? get_search_query() : '' );
 $base_url = $term ? get_term_link( $term ) : $shop_url;
@@ -136,7 +136,7 @@ if ( $term ) {
 						<?php foreach ( $brands_q as $bslug ) : ?><input type="hidden" name="brand[]" value="<?php echo esc_attr( $bslug ); ?>"><?php endforeach; ?>
 						<i class="ic-sort-desc"></i>
 						<label for="arc-orderby">مرتب‌سازی:</label>
-						<select id="arc-orderby" name="orderby" onchange="this.form.submit()">
+						<select id="arc-orderby" name="orderby" data-auto-submit>
 							<?php foreach ( $sorts as $k => $l ) : ?><option value="<?php echo esc_attr( $k ); ?>" <?php selected( $orderby, $k ); ?>><?php echo esc_html( $l ); ?></option><?php endforeach; ?>
 						</select>
 					</form>

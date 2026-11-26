@@ -143,7 +143,11 @@ class AIM_OTP {
 		// Site-wide brake against SMS pumping (many numbers from many IPs): codes per 24 hours.
 		$day_cap = (int) apply_filters( 'aim_otp_daily_cap', 1000 );
 		$by_day  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table WHERE created_at > %s", gmdate( 'Y-m-d H:i:s', time() - DAY_IN_SECONDS ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		if ( $day_cap > 0 && $by_day >= $day_cap ) {
+		if ( $day_cap > 0 && $by_day >= $day_cap && ! aim_get_user_by_phone( $phone ) ) {
+			if ( ! get_transient( 'aim_otp_cap_notice' ) ) {
+				AIM_Activity::log( 'otp_daily_cap', 'سقف روزانه ارسال کد برای شماره‌های جدید تکمیل شد.', 'sms' );
+				set_transient( 'aim_otp_cap_notice', 1, DAY_IN_SECONDS );
+			}
 			return new WP_Error( 'aim_limit', 'ارسال کد موقتاً متوقف شده است. کمی بعد دوباره تلاش کنید یا با پشتیبانی تماس بگیرید.' );
 		}
 
@@ -218,7 +222,7 @@ class AIM_OTP {
 	private static function login_response( $user_id, $redirect, $is_new ) {
 		wp_clear_auth_cookie();
 		wp_set_current_user( $user_id );
-		wp_set_auth_cookie( $user_id, true, is_ssl() );
+		wp_set_auth_cookie( $user_id, false, is_ssl() );
 		AIM_Activity::log( 'login', 'ورود به حساب', 'user', $user_id, $user_id );
 
 		$default  = aim_panel_url( 'user' );

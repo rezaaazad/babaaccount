@@ -256,6 +256,17 @@ function aim_t_breadcrumb( array $trail ) {
 		echo $url ? '<a href="' . esc_url( $url ) . '">' . esc_html( $label ) . '</a>' : '<span aria-current="page">' . esc_html( $label ) . '</span>';
 	}
 	echo '</nav>';
+	if ( ! defined( 'WPSEO_VERSION' ) && ! defined( 'RANK_MATH_VERSION' ) ) {
+		$items = [ [ '@type' => 'ListItem', 'position' => 1, 'name' => 'خانه', 'item' => home_url( '/' ) ] ];
+		foreach ( $trail as $label => $url ) {
+			$entry = [ '@type' => 'ListItem', 'position' => count( $items ) + 1, 'name' => $label ];
+			if ( $url && ! is_wp_error( $url ) ) {
+				$entry['item'] = esc_url_raw( $url );
+			}
+			$items[] = $entry;
+		}
+		echo '<script type="application/ld+json">' . wp_json_encode( [ '@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => $items ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . '</script>';
+	}
 }
 
 /** Primary (non-default) category of a product. */
@@ -369,7 +380,7 @@ function aim_t_badge_suggestions() {
  * Guests are sent to the login page by the REST reply; theme.js handles the click.
  */
 function aim_t_alert_button( WC_Product $p, $type ) {
-	$done  = AIM_Stock_Alerts::is_subscribed( $p->get_id(), $type );
+	$done  = class_exists( 'AIM_Stock_Alerts' ) && AIM_Stock_Alerts::is_subscribed( $p->get_id(), $type );
 	$label = 'stock' === $type ? 'وقتی موجود شد خبرم کن' : 'اگر تخفیف خورد خبرم کن';
 	printf(
 		'<button type="button" class="alert-btn alert-%1$s%2$s" data-alert="%1$s" data-product="%3$d" %4$s><i class="ic-%5$s" aria-hidden="true"></i><span>%6$s</span></button>',
