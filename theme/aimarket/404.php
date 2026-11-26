@@ -2,7 +2,7 @@
 defined( 'ABSPATH' ) || exit;
 status_header( 404 );
 get_header();
-$best = wc_get_products( [ 'status' => 'publish', 'limit' => 4, 'orderby' => 'popularity' ] );
+$best = aim_t_cached_products( [ 'status' => 'publish', 'limit' => 4, 'orderby' => 'popularity' ] );
 ?>
 <section class="sec">
 	<div class="container">

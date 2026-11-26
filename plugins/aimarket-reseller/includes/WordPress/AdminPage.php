@@ -93,6 +93,9 @@ final class AdminPage
             wp_die(esc_html__('اجازه این کار را ندارید.', 'aimarket-reseller'), '', ['response' => 403]);
         }
         check_admin_referer('hmr_admin');
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('اجازه این کار را ندارید.', 'aimarket-reseller'), '', ['response' => 403]);
+        }
         $op = sanitize_key((string) wp_unslash($_POST['hmr_op'] ?? ''));
         $section = sanitize_key((string) wp_unslash($_POST['hmr_back'] ?? 'hm-reseller'));
         if (!empty($_POST['hmr_panel']) && class_exists('AIM_WP_Admin')) {
@@ -166,8 +169,7 @@ final class AdminPage
             if (!is_array($current)) {
                 $current = [];
             }
-            $table = sanitize_key((string) wp_unslash($_POST['accounts_table'] ?? ''));
-            $current['accounts_table'] = $table;
+            unset($current['accounts_table']);
             $current['available_status'] = sanitize_key((string) wp_unslash($_POST['available_status'] ?? 'available')) ?: 'available';
             $current['sold_status'] = sanitize_key((string) wp_unslash($_POST['sold_status'] ?? 'sold')) ?: 'sold';
             update_option('hmr_settings', $current, false);

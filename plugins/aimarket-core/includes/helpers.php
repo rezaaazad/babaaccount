@@ -130,7 +130,43 @@ function aim_get_user_by_phone( $phone ) {
 }
 
 function aim_client_ip() {
-	return isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '0.0.0.0';
+	$remote = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+	if ( ! filter_var( $remote, FILTER_VALIDATE_IP ) ) {
+		return '0.0.0.0';
+	}
+	$trusted = (array) apply_filters( 'aim_trusted_proxies', defined( 'AIM_TRUSTED_PROXIES' ) ? AIM_TRUSTED_PROXIES : [ '127.0.0.0/8', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '::1/128', 'fc00::/7' ] );
+	$is_trusted = static function ( $ip ) use ( $trusted ) {
+		$packed = inet_pton( $ip );
+		foreach ( $trusted as $range ) {
+			$parts = explode( '/', (string) $range, 2 );
+			if ( ! filter_var( $parts[0], FILTER_VALIDATE_IP ) ) {
+				continue;
+			}
+			$net = inet_pton( $parts[0] );
+			$bits = isset( $parts[1] ) ? (int) $parts[1] : strlen( $net ) * 8;
+			if ( strlen( $packed ) !== strlen( $net ) || $bits < 0 || $bits > strlen( $net ) * 8 ) {
+				continue;
+			}
+			$bytes = intdiv( $bits, 8 );
+			$remaining = $bits % 8;
+			if ( substr( $packed, 0, $bytes ) === substr( $net, 0, $bytes ) && ( ! $remaining || ( ( ord( $packed[ $bytes ] ) ^ ord( $net[ $bytes ] ) ) >> ( 8 - $remaining ) ) === 0 ) ) {
+				return true;
+			}
+		}
+		return false;
+	};
+	if ( ! $is_trusted( $remote ) ) {
+		return $remote;
+	}
+	$header = 'HTTP_' . strtoupper( str_replace( '-', '_', (string) apply_filters( 'aim_client_ip_header', 'X-Forwarded-For' ) ) );
+	$chain = isset( $_SERVER[ $header ] ) ? sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) ) : '';
+	foreach ( array_reverse( explode( ',', $chain ) ) as $candidate ) {
+		$candidate = trim( $candidate );
+		if ( filter_var( $candidate, FILTER_VALIDATE_IP ) && ! $is_trusted( $candidate ) ) {
+			return $candidate;
+		}
+	}
+	return $remote;
 }
 
 /**

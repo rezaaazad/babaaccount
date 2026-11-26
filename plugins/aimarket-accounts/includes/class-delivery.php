@@ -15,6 +15,32 @@ defined( 'ABSPATH' ) || exit;
  *   _aim_shortage    accounts still owed when inventory ran out
  */
 class AIM_Delivery {
+	private static $locked_orders = [];
+
+	private static function with_order_lock( $order_id, $callback ) {
+		global $wpdb;
+		$order_id = absint( $order_id );
+		if ( isset( self::$locked_orders[ $order_id ] ) ) {
+			return $callback();
+		}
+		$lock = 'aim_deliver_' . md5( $wpdb->prefix . ':' . $order_id );
+		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 5)', $lock ) ) ) {
+			return new WP_Error( 'aim_delivery_busy', 'تحویل در حال انجام است؛ دوباره تلاش کنید.' );
+		}
+		self::$locked_orders[ $order_id ] = true;
+		try {
+			return $callback();
+		} finally {
+			unset( self::$locked_orders[ $order_id ] );
+			$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+		}
+	}
+
+	private static function assigned_count( $item_id ) {
+		global $wpdb;
+		$table = AIM_Inventory::table();
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table WHERE order_item_id = %d AND status = 'assigned'", $item_id ) );
+	}
 
 	public static function init() {
 		$on = AIM_Settings::get( 'delivery_on_status' ) === 'completed' ? 'completed' : 'processing';
@@ -41,6 +67,12 @@ class AIM_Delivery {
 	}
 
 	public static function deliver_order( $order_id ) {
+		return self::with_order_lock( $order_id, static function () use ( $order_id ) {
+			return self::deliver_locked( $order_id );
+		} );
+	}
+
+	private static function deliver_locked( $order_id ) {
 		$order = wc_get_order( $order_id );
 		if ( ! $order || ( ! $order->is_paid() && ! in_array( $order->get_status(), [ 'processing', 'completed' ], true ) ) ) {
 			return;
@@ -69,17 +101,21 @@ class AIM_Delivery {
 				continue;
 			}
 			if ( 'manual' === $mode ) {
-				$has_manual = $has_manual || (int) $item->get_meta( '_aim_delivered' ) < (int) $item->get_quantity();
+				$has_manual = $has_manual || self::assigned_count( $item_id ) < (int) $item->get_quantity();
 				continue;
 			}
 
-			$need = (int) $item->get_quantity() - (int) $item->get_meta( '_aim_delivered' );
+			$assigned = self::assigned_count( $item_id );
+			$need = (int) $item->get_quantity() - $assigned;
 			if ( $need <= 0 ) {
+				$item->update_meta_data( '_aim_delivered', $assigned );
+				$item->update_meta_data( '_aim_shortage', 0 );
+				$item->save();
 				continue;
 			}
 			$ids = self::claim( $pid, $vid, $need, $order, $item_id );
 			if ( $ids ) {
-				$item->update_meta_data( '_aim_delivered', (int) $item->get_meta( '_aim_delivered' ) + count( $ids ) );
+				$item->update_meta_data( '_aim_delivered', $assigned + count( $ids ) );
 				$delivered_now = array_merge( $delivered_now, $ids );
 			}
 			$short = $need - count( $ids );
@@ -117,6 +153,18 @@ class AIM_Delivery {
 	 * @return int[] Claimed account ids.
 	 */
 	public static function claim( $pid, $vid, $qty, WC_Order $order, $item_id ) {
+		$result = self::with_order_lock( $order->get_id(), static function () use ( $pid, $vid, $qty, $order, $item_id ) {
+			$item = $order->get_item( $item_id );
+			if ( ! $item instanceof WC_Order_Item_Product ) {
+				return [];
+			}
+			$qty = max( 0, min( $qty, $item->get_quantity() - self::assigned_count( $item_id ) ) );
+			return self::claim_locked( $pid, $vid, $qty, $order, $item_id );
+		} );
+		return is_wp_error( $result ) ? [] : $result;
+	}
+
+	private static function claim_locked( $pid, $vid, $qty, WC_Order $order, $item_id ) {
 		global $wpdb;
 		$table   = AIM_Inventory::table();
 		$claimed = [];
@@ -144,7 +192,7 @@ class AIM_Delivery {
 					$now,
 					$id
 				) );
-				if ( $updated ) {
+				if ( 1 === $updated ) {
 					$claimed[] = (int) $id;
 				}
 			}
@@ -154,9 +202,15 @@ class AIM_Delivery {
 
 	/** Admin delivers a manual-mode item by typing the account details. */
 	public static function deliver_manual( WC_Order $order, $item_id, $secret ) {
+		return self::with_order_lock( $order->get_id(), static function () use ( $order, $item_id, $secret ) {
+			return self::deliver_manual_locked( wc_get_order( $order->get_id() ), $item_id, $secret );
+		} );
+	}
+
+	private static function deliver_manual_locked( WC_Order $order, $item_id, $secret ) {
 		global $wpdb;
 		$item = $order->get_item( $item_id );
-		if ( ! $item ) {
+		if ( ! $item instanceof WC_Order_Item_Product || self::assigned_count( $item_id ) >= $item->get_quantity() ) {
 			return new WP_Error( 'aim_item', 'آیتم سفارش پیدا نشد.' );
 		}
 		$pid      = $item->get_product_id();
@@ -182,7 +236,7 @@ class AIM_Delivery {
 		if ( ! $id ) {
 			return new WP_Error( 'aim_insert', 'ذخیرهٔ اکانت انجام نشد؛ دوباره تلاش کنید.' );
 		}
-		$item->update_meta_data( '_aim_delivered', (int) $item->get_meta( '_aim_delivered' ) + 1 );
+		$item->update_meta_data( '_aim_delivered', self::assigned_count( $item_id ) );
 		$item->save();
 		$order->add_order_note( 'اکانت به‌صورت دستی تحویل شد.' );
 		AIM_Activity::log( 'order_delivered_manual', aim_fa_digits( sprintf( 'تحویل دستی اکانت برای سفارش #%d', $order->get_id() ) ), 'order', $order->get_id() );
@@ -193,14 +247,16 @@ class AIM_Delivery {
 
 	/** Retry delivery for items that ran short (after new stock is added). */
 	public static function retry( WC_Order $order ) {
-		self::deliver_order( $order->get_id() );
-		self::maybe_complete( $order );
+		return self::with_order_lock( $order->get_id(), static function () use ( $order ) {
+			self::deliver_locked( $order->get_id() );
+			self::maybe_complete( $order );
+		} );
 	}
 
 	private static function maybe_complete( WC_Order $order ) {
 		$order = wc_get_order( $order->get_id() );
 		foreach ( $order->get_items() as $item ) {
-			if ( AIM_Inventory::delivery_mode( $item->get_product_id() ) && (int) $item->get_meta( '_aim_delivered' ) < (int) $item->get_quantity() ) {
+			if ( AIM_Inventory::delivery_mode( $item->get_product_id() ) && self::assigned_count( $item->get_id() ) < (int) $item->get_quantity() ) {
 				return;
 			}
 		}
@@ -210,9 +266,12 @@ class AIM_Delivery {
 	}
 
 	/** Per-item delivery state for the admin order view. */
-	public static function item_state( WC_Order_Item_Product $item ) {
+	public static function item_state( WC_Order_Item $item ) {
+		if ( ! $item instanceof WC_Order_Item_Product ) {
+			return [ 'mode' => '', 'delivered' => 0, 'qty' => 0, 'owed' => 0 ];
+		}
 		$mode      = AIM_Inventory::delivery_mode( $item->get_product_id() );
-		$delivered = (int) $item->get_meta( '_aim_delivered' );
+		$delivered = self::assigned_count( $item->get_id() );
 		$qty       = (int) $item->get_quantity();
 		return [
 			'mode'      => $mode,

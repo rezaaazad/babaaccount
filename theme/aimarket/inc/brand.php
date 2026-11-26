@@ -13,7 +13,7 @@ function aim_t_brand_url( $file ) {
 
 /** The logo symbol as an <img>. */
 function aim_t_brand_mark( $class = 'brand-logo' ) {
-	return sprintf( '<img class="%s" src="%s" alt="" width="308" height="290" decoding="async">', esc_attr( $class ), esc_url( aim_t_brand_url( 'mark.webp' ) ) );
+	return sprintf( '<img class="%s" src="%s" alt="%s" width="308" height="290" loading="eager" fetchpriority="auto" decoding="async">', esc_attr( $class ), esc_url( aim_t_brand_url( 'mark.webp' ) ), esc_attr( get_bloginfo( 'name' ) ) );
 }
 
 /**

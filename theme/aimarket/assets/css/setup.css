@@ -2,7 +2,7 @@
    Theme setup page (Appearance → «راه‌اندازی هوش‌مارکت») and the storefront
    «در حال راه‌اندازی» page. Stand-alone: works before the panel plugin and
    WooCommerce are active. The .illus rules at the end are generated from
-   theme.css by dev/build-zip.sh (keep them in sync there, not here).
+   theme.css (keep the shared rules synchronized).
    ========================================================================= */
 
 .aimt-setup, .aimt-body {

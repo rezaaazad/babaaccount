@@ -8,7 +8,7 @@ defined( 'ABSPATH' ) || exit;
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title><?php echo esc_html( get_bloginfo( 'name' ) . ' — در حال راه‌اندازی' ); ?></title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+<link rel="stylesheet" href="<?php echo esc_url( get_template_directory_uri() . '/assets/css/fonts.css' ); ?>">
 <link rel="stylesheet" href="<?php echo esc_url( get_template_directory_uri() . '/assets/css/setup.css?ver=' . filemtime( get_template_directory() . '/assets/css/setup.css' ) ); ?>">
 </head>
 <body class="aimt-body">

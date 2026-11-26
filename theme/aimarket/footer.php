@@ -10,7 +10,7 @@ if ( ! aim_t_elementor_part( 'footer' ) ) {
 }
 ?>
 
-<div class="toast-stack" data-toasts aria-live="assertive"></div>
+<div class="toast-stack" data-toasts role="status" aria-live="polite"></div>
 <?php wp_footer(); ?>
 </body>
 </html>

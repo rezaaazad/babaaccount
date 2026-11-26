@@ -2,6 +2,7 @@
 defined( 'ABSPATH' ) || exit;
 
 require_once get_template_directory() . '/inc/components.php';
+require_once get_template_directory() . '/inc/cache.php';
 require_once get_template_directory() . '/inc/art.php';
 require_once get_template_directory() . '/inc/minicart.php';
 require_once get_template_directory() . '/inc/sections.php';
@@ -11,6 +12,8 @@ require_once get_template_directory() . '/inc/footer.php';
 require_once get_template_directory() . '/inc/archive.php';
 require_once get_template_directory() . '/inc/options.php';
 require_once get_template_directory() . '/inc/setup.php';
+require_once get_template_directory() . '/inc/hardening.php';
+require_once get_template_directory() . '/inc/seo.php';
 require_once get_template_directory() . '/inc/elementor/loader.php';
 
 // Footer "get discount codes" signup: stores unique phone numbers in an option.
@@ -19,11 +22,22 @@ add_action( 'rest_api_init', function () {
 		'methods'             => 'POST',
 		'permission_callback' => '__return_true',
 		'callback'            => function ( WP_REST_Request $req ) {
+			if ( $req->get_param( 'website' ) ) {
+				return new WP_REST_Response( [ 'ok' => false ], 400 );
+			}
 			$phone = function_exists( 'aim_normalize_phone' ) ? aim_normalize_phone( $req->get_param( 'phone' ) ) : '';
 			if ( ! $phone ) {
 				return new WP_REST_Response( [ 'ok' => false, 'message' => 'شمارهٔ موبایل معتبر نیست.' ], 400 );
 			}
 			$list = get_option( 'aim_newsletter', [] );
+			$ip = function_exists( 'aim_client_ip' ) ? aim_client_ip() : sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '' ) );
+			$key = 'aim_nl_' . md5( $ip );
+			$number_key = 'aim_nl_phone_' . md5( $phone );
+			if ( (int) get_transient( $key ) >= 5 || get_transient( $number_key ) || ( ! isset( $list[ $phone ] ) && count( $list ) >= 20000 ) ) {
+				return new WP_REST_Response( [ 'ok' => false, 'message' => 'لطفاً کمی بعد دوباره تلاش کنید.' ], 429 );
+			}
+			set_transient( $key, (int) get_transient( $key ) + 1, HOUR_IN_SECONDS );
+			set_transient( $number_key, 1, HOUR_IN_SECONDS );
 			if ( ! isset( $list[ $phone ] ) ) {
 				$list[ $phone ] = time();
 				update_option( 'aim_newsletter', $list, false );
@@ -34,11 +48,15 @@ add_action( 'rest_api_init', function () {
 } );
 
 add_action( 'after_setup_theme', function () {
+	load_theme_textdomain( 'aimarket', get_template_directory() . '/languages' );
+	add_theme_support( 'automatic-feed-links' );
+	add_theme_support( 'responsive-embeds' );
+	$GLOBALS['content_width'] = 1200;
 	add_theme_support( 'title-tag' );
 	add_theme_support( 'post-thumbnails' );
 	add_theme_support( 'custom-logo', [ 'height' => 64, 'width' => 220, 'flex-width' => true ] );
 	add_theme_support( 'woocommerce' );
-	add_theme_support( 'html5', [ 'search-form', 'gallery', 'caption', 'style', 'script' ] );
+	add_theme_support( 'html5', [ 'search-form', 'gallery', 'caption', 'style', 'script', 'comment-form', 'comment-list' ] );
 	register_nav_menus( [
 		'header' => 'منوی هدر',
 		'footer' => 'منوی فوتر',
@@ -48,19 +66,29 @@ add_action( 'after_setup_theme', function () {
 add_action( 'wp_enqueue_scripts', function () {
 	$dir = get_template_directory();
 	$uri = get_template_directory_uri();
-	wp_enqueue_style( 'aim-font', 'https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css', [], null );
+	wp_enqueue_style( 'aim-font', $uri . '/assets/css/fonts.css', [], filemtime( $dir . '/assets/css/fonts.css' ) );
 	wp_enqueue_style( 'aim-icons', $uri . '/assets/css/icons.css', [], filemtime( $dir . '/assets/css/icons.css' ) );
-	if ( defined( 'AIM_URL' ) ) {
+	if ( defined( 'AIM_URL' ) && defined( 'AIM_DIR' ) && defined( 'AIM_VERSION' ) ) {
 		wp_enqueue_style( 'aim-panel', AIM_URL . 'assets/css/panel.css', [], AIM_VERSION . '.' . filemtime( AIM_DIR . 'assets/css/panel.css' ) );
 	}
 	wp_enqueue_style( 'aim-theme', $uri . '/assets/css/theme.css', [], filemtime( $dir . '/assets/css/theme.css' ) );
 	wp_enqueue_script( 'aim-theme', $uri . '/assets/js/theme.js', [], filemtime( $dir . '/assets/js/theme.js' ), true );
 	wp_localize_script( 'aim-theme', 'AIMT', [
 		'rest'     => esc_url_raw( rest_url( 'aimarket/v1/' ) ),
-		'nonce'    => wp_create_nonce( 'wp_rest' ),
+		'nonce'    => '',
+		'nonceUrl' => admin_url( 'admin-ajax.php?action=aim_theme_nonce' ),
 		'noDrawer' => ( function_exists( 'is_cart' ) && ( is_cart() || is_checkout() ) ) ? 1 : 0,
 	] );
 } );
+
+function aim_theme_nonce() {
+	nocache_headers();
+	header( 'Cache-Control: no-store, private' );
+	header( 'Vary: Cookie', false );
+	wp_send_json_success( [ 'nonce' => wp_create_nonce( 'wp_rest' ) ] );
+}
+add_action( 'wp_ajax_aim_theme_nonce', 'aim_theme_nonce' );
+add_action( 'wp_ajax_nopriv_aim_theme_nonce', 'aim_theme_nonce' );
 
 // Apply saved colour mode before paint.
 add_action( 'wp_head', function () {
@@ -68,8 +96,14 @@ add_action( 'wp_head', function () {
 }, 1 );
 
 add_filter( 'body_class', fn( $c ) => array_merge( $c, [ 'aim' ] ) );
+add_filter( 'elementor/frontend/print_google_fonts', '__return_false' );
+add_action( 'wp_head', static function () {
+	foreach ( [ 'Regular', 'Bold' ] as $weight ) {
+		echo '<link rel="preload" as="font" type="font/woff2" crossorigin href="' . esc_url( get_template_directory_uri() . '/assets/fonts/Vazirmatn-' . $weight . '.woff2' ) . '">' . "\n";
+	}
+}, 2 );
 
-// Shop: 3 columns, 12 per page; no sidebar.
+// Shop: 3 columns, 24 per page; no sidebar.
 add_filter( 'loop_shop_columns', fn() => 3 );
 add_filter( 'loop_shop_per_page', fn() => 24 );
 
@@ -220,7 +254,7 @@ add_filter( 'woocommerce_add_to_cart_fragments', function ( $fragments ) {
 
 // wp-login.php (admin sign-in, lost/reset password): store branding instead of the WordPress logo.
 add_action( 'login_enqueue_scripts', function () {
-	wp_enqueue_style( 'aim-font', 'https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css', [], null );
+	wp_enqueue_style( 'aim-font', get_template_directory_uri() . '/assets/css/fonts.css', [], null );
 	wp_enqueue_style( 'aim-login', get_template_directory_uri() . '/assets/css/login.css', [], filemtime( get_template_directory() . '/assets/css/login.css' ) );
 } );
 add_filter( 'login_headerurl', fn() => home_url( '/' ) );

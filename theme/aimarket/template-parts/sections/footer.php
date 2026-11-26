@@ -71,6 +71,7 @@ $a = $args;
 						<div class="ft-card-head"><span><i class="ic-coupon-3-line"></i></span><h3><?php echo esc_html( $a['news']['title'] ); ?></h3></div>
 						<?php if ( $a['news']['text'] ) : ?><p><?php echo esc_html( $a['news']['text'] ); ?></p><?php endif; ?>
 						<form class="ft-news" data-newsletter>
+							<input name="website" type="text" hidden tabindex="-1" autocomplete="off" aria-hidden="true">
 							<label class="visually-hidden" for="nl-phone">شمارهٔ موبایل</label>
 							<input id="nl-phone" type="tel" inputmode="numeric" name="phone" placeholder="<?php echo esc_attr( $a['news']['placeholder'] ); ?>" required>
 							<button type="submit"><?php echo esc_html( $a['news']['button'] ); ?></button>

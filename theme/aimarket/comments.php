@@ -50,7 +50,7 @@ $count = (int) get_comments_number();
 				'fields'               => [
 					'author'  => '<p class="comment-form-author"><label for="author">نام</label><input id="author" name="author" type="text" required></p>',
 					'email'   => '<p class="comment-form-email"><label for="email">ایمیل</label><input id="email" name="email" type="email" required></p>',
-					'cookies' => '',
+					'cookies' => get_option( 'show_comments_cookies_opt_in' ) ? '<p class="comment-form-cookies-consent"><input id="wp-comment-cookies-consent" name="wp-comment-cookies-consent" type="checkbox" value="yes"><label for="wp-comment-cookies-consent">' . esc_html__( 'Save my name and email in this browser for the next time I comment.' ) . '</label></p>' : '',
 				],
 				'comment_field'        => '<p class="comment-form-comment"><label for="comment">دیدگاه</label><textarea id="comment" name="comment" rows="5" required></textarea></p>',
 			] );

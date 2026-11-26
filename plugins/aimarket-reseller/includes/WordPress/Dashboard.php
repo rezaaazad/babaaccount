@@ -152,7 +152,7 @@ final class Dashboard
                     array_map('strval', $ips),
                     (int) ($_POST['rate_limit'] ?? 60)
                 );
-                set_transient('hmr_reveal_' . get_current_user_id(), $token, 60);
+                set_transient('hmr_reveal_' . get_current_user_id(), $this->services->crypto->encrypt($token), 60);
             } elseif ($op === 'revoke_key') {
                 $this->services->auth->revoke((int) $reseller['id'], (int) ($_POST['key_id'] ?? 0));
             } elseif ($op === 'webhook') {
@@ -226,6 +226,7 @@ final class Dashboard
         $reveal = get_transient('hmr_reveal_' . get_current_user_id());
         if (is_string($reveal) && $reveal !== '') {
             delete_transient('hmr_reveal_' . get_current_user_id());
+            $reveal = $this->services->crypto->isOurs($reveal) ? $this->services->crypto->decrypt($reveal) : '';
             echo '<div class="hmr-reveal"><p>این کلید فقط یک‌بار نشان داده می‌شود. آن را جایی امن نگه دارید.</p>';
             echo '<input readonly value="' . esc_attr($reveal) . '" id="hmr-new-key" /> <button type="button" class="hmr-copy" data-copy="hmr-new-key">کپی</button></div>';
         }

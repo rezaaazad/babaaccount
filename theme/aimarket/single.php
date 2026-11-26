@@ -13,7 +13,7 @@ while ( have_posts() ) :
 		$trail[ $cats[0]->name ] = get_category_link( $cats[0] );
 	}
 	$trail[ get_the_title() ] = '';
-	$words   = str_word_count( wp_strip_all_tags( get_the_content() ), 0, 'آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهیيكةۀأإؤئ‌' );
+	$words   = count( preg_split( '/\s+/u', trim( wp_strip_all_tags( get_the_content() ) ), -1, PREG_SPLIT_NO_EMPTY ) ?: [] );
 	$minutes = max( 1, (int) ceil( $words / 200 ) );
 	?>
 	<section class="pg-head pg-head-post">

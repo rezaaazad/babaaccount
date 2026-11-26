@@ -69,17 +69,29 @@ class AIM_Crypto {
 		$current = self::key();
 		$old     = self::key( self::salts() );
 		$moved   = 0;
-		foreach ( $wpdb->get_results( "SELECT id, secret FROM $table" ) as $row ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$progress = get_option( 'aim_key_migration_progress', [] );
+		$cursor = ( $progress['marker'] ?? '' ) === $marker ? (int) $progress['cursor'] : 0;
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT id, secret FROM $table WHERE id > %d ORDER BY id LIMIT 200", $cursor ) );
+		if ( null === $rows ) {
+			return;
+		}
+		foreach ( $rows as $row ) {
+			$cursor = (int) $row->id;
 			if ( null !== self::open( $row->secret, $current ) ) {
 				continue;
 			}
 			$plain = self::open( $row->secret, $old );
 			if ( null !== $plain ) {
-				$wpdb->update( $table, [ 'secret' => self::encrypt( $plain ) ], [ 'id' => $row->id ] );
+				$wpdb->update( $table, [ 'secret' => self::encrypt( $plain ) ], [ 'id' => $row->id, 'secret' => $row->secret ] );
 				$moved++;
 			}
 		}
-		update_option( self::MIGRATED_OPTION, $marker, false );
+		if ( count( $rows ) < 200 ) {
+			update_option( self::MIGRATED_OPTION, $marker, false );
+			delete_option( 'aim_key_migration_progress' );
+		} else {
+			update_option( 'aim_key_migration_progress', [ 'marker' => $marker, 'cursor' => $cursor ], false );
+		}
 		if ( $moved ) {
 			AIM_Activity::log( 'key_migrated', sprintf( 'اطلاعات %s اکانت با کلید رمزنگاری جدید دوباره رمز شد', aim_fa_digits( $moved ) ), 'settings' );
 		}

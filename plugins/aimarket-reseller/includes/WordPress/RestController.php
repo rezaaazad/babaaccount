@@ -285,9 +285,9 @@ final class RestController
 
     private function clientIp(WP_REST_Request $request): string
     {
-        $ip = isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '';
+        $ip = function_exists('aim_client_ip') ? aim_client_ip() : sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? ''));
         $filtered = apply_filters('hm_reseller_client_ip', $ip, $request);
-        return is_string($filtered) ? $filtered : $ip;
+        return is_string($filtered) && filter_var($filtered, FILTER_VALIDATE_IP) ? $filtered : $ip;
     }
 
     /**

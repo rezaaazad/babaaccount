@@ -35,8 +35,8 @@ defined( 'ABSPATH' ) || exit;
 				<p class="form-help">اطلاعات اکانت‌ها با کلید داخل wp-config.php رمز می‌شوند. از wp-config.php جدا از نسخهٔ پشتیبان پایگاه داده نسخه نگه دارید؛ بدون آن کلید، اطلاعات اکانت‌ها خوانده نمی‌شود.</p>
 			<?php else : ?>
 				<p class="text-2" style="margin-top:0">الان اطلاعات اکانت‌ها با کلیدی ساخته‌شده از کلیدهای امنیتی وردپرس رمز می‌شود. با یک کلید اختصاصی در wp-config.php، حتی اگر پایگاه داده لو برود اطلاعات اکانت‌ها خوانده نمی‌شود. اکانت‌های فعلی خودکار با کلید جدید رمز می‌شوند.</p>
-				<button type="button" class="btn btn-primary" data-secret-key><?php echo aim_icon( 'key-2-line' ); // phpcs:ignore ?><?php echo $key_status['writable'] ? 'ساخت و ثبت خودکار کلید' : 'ساخت کلید'; ?></button>
-				<?php if ( ! $key_status['writable'] ) : ?><p class="form-help">هاست اجازهٔ تغییر wp-config.php را نمی‌دهد؛ پس از ساخت، خطی نمایش داده می‌شود که باید دستی (با فایل‌منیجر هاست) به ابتدای wp-config.php اضافه کنید.</p><?php endif; ?>
+				<button type="button" class="btn btn-primary" data-secret-key><?php echo aim_icon( 'key-2-line' ); // phpcs:ignore ?>ساخت کلید</button>
+				<p class="form-help">پس از گرفتن نسخه پشتیبان، خط نمایش داده‌شده را دستی به wp-config.php اضافه کنید.</p>
 				<div class="secret-result" data-secret-result hidden>
 					<p data-secret-msg></p>
 					<code class="ltr" data-secret-code></code>

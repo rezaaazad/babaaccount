@@ -218,13 +218,22 @@ final class Crm
     public function setWebhook(int $resellerId, string $url): void
     {
         $url = trim($url);
-        if ($url !== '' && !preg_match('#^https?://#i', $url)) {
-            throw new ApiException('invalid_webhook', 'آدرس وب‌هوک باید با http:// یا https:// شروع شود.', 422);
+        if ($url !== '' && !self::validWebhook($url)) {
+            throw new ApiException('invalid_webhook', 'آدرس وب‌هوک معتبر نیست.', 422);
         }
         $this->db->execute(
             "UPDATE {$this->tables->resellers()} SET webhook_url = ?, updated_at = ? WHERE id = ?",
             [$url === '' ? null : $url, Clock::now(), $resellerId]
         );
+    }
+
+    public static function validWebhook(string $url): bool
+    {
+        $parts = wp_parse_url($url);
+        $scheme = strtolower($parts['scheme'] ?? '');
+        return ($scheme === 'https' || ($scheme === 'http' && apply_filters('hmr_webhook_allow_http', false)))
+            && in_array((int) ($parts['port'] ?? ($scheme === 'https' ? 443 : 80)), [80, 443], true)
+            && (bool) wp_http_validate_url($url);
     }
 
     public function rotateWebhookSecret(int $resellerId, Crypto $crypto): string
